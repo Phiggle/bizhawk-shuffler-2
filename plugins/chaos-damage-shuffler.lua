@@ -214,6 +214,7 @@ plugin.description =
 	-Mortal Kombat (Genesis/Mega Drive), 1p (for now)
 	-Mortal Kombat II (SNES), 1p (for now)
 	-Mystic Warriors (Arcade), 1p
+	-N+ (DS), 1p
 	-NBA JAM Tournament Edition (PSX), 1p - shuffles on points scored by opponent and on end of quarter
 	-Ninja Gaiden (NES), 1p
 	-Ninja Gaiden II - The Dark Sword of Chaos (NES), 1p
@@ -6090,6 +6091,28 @@ local gamedata = {
 		p1livesaddr=function() return 0x08aa end,
 		maxlives=function() return 69 end,
 		ActiveP1=function() return true end, -- p1 is always active!
+	},
+	['NPlus_DS'] = { -- N+, DS
+		func = singleplayer_withlives_swap,
+		p1gethp = function() return 1 end,
+		-- use death counter as 'negative lives'
+		p1getlc = function() return -memory.read_u16_le(0x0DE0D4, "Main RAM") end,
+		maxhp = function() return 1 end,
+		swap_exceptions = function()
+			-- 'gamestate' check, have to actually be playing
+			if memory.read_u32_le(0x0D45A4, "Main RAM") ~= 0 then return true end
+			local restart_pressed = memory.read_u16_le(0x12ECA0, "Main RAM") & 0x400 ~= 0
+			local restart_changed = update_prev('restart', restart_pressed)
+			-- don't swap if 'restart' button was just released (this kills you)
+			if restart_changed and not restart_pressed then return true end
+			-- don't swap after level is finished
+			return memory.read_u8(0x0DE0D9, "Main RAM") == 1
+		end,
+		-- OTHER NOTES:
+		-- 0x0D45A4 is 1 during demos/replays/etc and 0 for 'real' gameplay
+		-- 0x0DE0D9 is 0 during a level, 1 on success, 2 on failure
+		-- 0x0DFF48 is 1 for a frame on death, a frame later for restarts?
+		-- 0x12ECA0 is a bitset of digital inputs (12 bits) (0x400 restart)
 	},
 	['PockyRocky_SNES']={ -- Pocky & Rocky, SNES
 		func=twoplayers_withlives_swap,
