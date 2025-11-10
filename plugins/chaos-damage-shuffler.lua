@@ -232,6 +232,7 @@ plugin.description =
 	-Resident Evil (PSX), 1p - includes OG, Director's Cut, Dualshock and True Director's Cut Hack
 	-Resident Evil 2 (PSX), 1p - includes Regular & DualShock Ver (recommend using multi-disk bundler to work between disks)
 	-Resident Evil 3 (PSX), 1p
+	-Rhythm Tengoku (GBA), 1p
 	-Ristar (Genesis/Mega Drive), 1p
 	-Rock 'n Roll Racing (SNES), 1p
 	-Rocket Knight Adventures (Genesis/Mega Drive), 1p
@@ -6102,6 +6103,33 @@ local gamedata = {
 		p1livesaddr=function() return 0x0022 end,
 		maxlives=function() return 69 end,
 		ActiveP1=function() return true end, -- p1 is always active!	
+	},
+	['RhythmTengoku_GBA'] = { -- Rhythm Tengoku, GBA
+		func = function(gamemeta)
+			return function(data)
+				local score_changed, _, prev_score = update_prev('score', memory.read_s16_le(0x5E, "EWRAM"))
+				-- minigame just finished, score set
+				if score_changed and prev_score < 0 then
+					local ptr = memory.read_u32_le(0x46A4, "IWRAM")
+					if ptr >> 24 == 0x02 then -- EWRAM
+						-- fetch the result: 0 fail, 1 pass, 2 good
+						local grade = memory.read_u8((ptr & 0x3FFFF) + 12, "EWRAM")
+						-- wait for result to show on screen before swapping
+						return grade < gamemeta.target, 150
+					end
+				end
+				return false
+			end
+		end,
+		-- target grade: 1 requires passing, 2 requires a 'good', 3 will always shuffle
+		target = 1,
+		-- OTHER NOTES:
+		-- 0x005E EWRAM holds the score on finishing a minigame, otherwise -1
+		--   values may be 0-1000? grade requirements vary per minigame, not score-based?
+		-- 0x00CE EWRAM holds your overall average rating (0-100?)
+		-- 0x15BC IWRAM shows the music speed (2x BPM?)
+		-- 0x46A4 IWRAM is a pointer to game data
+		--   while on the menu, the selected minigame id is at +0x48
 	},
 	['Ristar_GEN']={ -- Ristar, Genesis
 		func=singleplayer_withlives_swap,
