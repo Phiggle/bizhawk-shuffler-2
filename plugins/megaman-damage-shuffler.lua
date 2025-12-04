@@ -665,9 +665,12 @@ local gamedata = {
 			return function()
 				local hit_changed, hit = update_prev("hit_changed", hit_states[memory.read_u8(0x56, "RAM")] or false)
 				local game_over_changed, game_over = update_prev("game_over", memory.read_u16_le(0x5C0, "RAM") == 0xD6D4)
-				local in_shop = memory.read_u16_le(0x10, "RAM") == 0xD
+				local in_shop = memory.read_u8(0x10, "RAM") == 0xD
+				local in_bike_stage = memory.read_u8(0x3F, "RAM") == 0x6
+				local hp_changed, hp_curr, hp_prev = update_prev("hp", memory.read_u8(0x5C, "RAM"))
 				return (hit_changed and hit and not in_shop) or
-				       (game_over_changed and game_over and not hit)
+				       (game_over_changed and game_over and not hit and not in_bike_stage) or
+					   (in_bike_stage and hp_changed and hp_curr < hp_prev)
 			end
 		end
 	},
