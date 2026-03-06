@@ -176,6 +176,7 @@ plugin.description =
 	-Gremlins 2: The New Batch (NES), 1p
 	-Gunstar Heroes (Genesis/Mega Drive), 1p
 	-Hammerin' Harry (NES), 1p
+	-Haunted Castle (version M) (Arcade), 1p
 	-Hercules II (Bootleg) (Genesis/Mega Drive), 1p
 	-High Seas Havoc (Genesis/Mega Drive), 1p
 	-Ice Climber (NES), 1-2p
@@ -6078,6 +6079,18 @@ local gamedata = {
 		LivesWhichRAM=function() return "RAM" end,
 		p1livesaddr=function() return 0x036a end,
 		maxlives=function() return 7 end, -- lives count down on clearing this game
+		ActiveP1=function() return true end, -- p1 is always active!
+	},
+	['HauntedCastle_ARC']={ -- Haunted Castle (version M)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x010C, "konami_cpu : ram : 0x700-0x1FFF") end,
+		p1getlc=function() return memory.read_u8(0x11C4, "konami_cpu : ram : 0x700-0x1FFF") end,
+		maxhp=function() return 16 end,
+		gmode=function() return memory.read_u8(0x0117, "konami_cpu : ram : 0x700-0x1FFF")==1 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x012E end, -- haunted castle's invisible continue limit
+		LivesWhichRAM=function() return "konami_cpu : ram : 0x700-0x1FFF" end,
+		maxlives=function() return 0 end,
 		ActiveP1=function() return true end, -- p1 is always active!
 	},
 	['HighSeasHavoc_GEN']={ -- High Seas Havoc, Genesis
