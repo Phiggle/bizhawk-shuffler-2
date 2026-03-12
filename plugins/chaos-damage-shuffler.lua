@@ -154,6 +154,7 @@ plugin.description =
 	-Chip and Dale Rescue Rangers 2 (NES), 1-2p
 	-Crash Bandicoot 1-3 (PSX), 1p, US version
 	-Crash Bandicoot 4 (Bootleg) (NES), 1p
+	-Darius Twin (USA) (SNES), 1p
 	-Darkwing Duck (NES), 1p
 	-Demon's Crest (SNES), 1p
 	-Dick Tracy (NES), 1p
@@ -167,6 +168,7 @@ plugin.description =
 	-Einhänder (PSX), 1p
 	-F-Zero (SNES), 1p
 	-Family Feud (SNES), 1-2p
+	-Fantasy Zone (Arcade), 1p
 	-Garfield: A Week of Garfield (NES), 1p
 	-Gargoyle's Quest II (NES), 1p
 	-Ghosts'n Goblins (NES), 1p
@@ -229,6 +231,7 @@ plugin.description =
 	-Power Blade (NES), 1p
 	-Power Blade 2 (NES), 1p
 	-Powerslave/Exhumed, Saturn
+	-R-Type Leo (World) (Arcade), 1p
 	-Rainbow Islands - The Story of Bubble Bobble 2 (NES), 1p
 	-Resident Evil (PSX), 1p - includes OG, Director's Cut, Dualshock and True Director's Cut Hack
 	-Resident Evil 2 (PSX), 1p - includes Regular & DualShock Ver (recommend using multi-disk bundler to work between disks)
@@ -244,6 +247,7 @@ plugin.description =
 	-Shaq-Fu (Genesis/Mega Drive), 1p
 	-Shatterhand (NES), 1p
 	-Shinobi III (Genesis/Mega Drive), 1p
+	-Silver Surfer (NES), 1p
 	-Simpsons: Bart vs. the World (NES), 1p
 	-Snake Rattle 'n Roll (NES), 1p
 	-Sonic Jam 6 (bootleg) (Genesis/Mega Drive), 1p
@@ -4152,6 +4156,17 @@ local gamedata = {
 		getwhichplayer=function() return memory.read_u8(0x08DF, "WRAM") end,
 		CanHaveInfiniteLives=false
 	},
+	['FantasyZone_ARC']={ -- Fantasy Zone (Rev A, unprotected)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return 1 end,
+		p1getlc=function() return memory.read_u8(0x0003, "m68000 : ram : 0xC70000-0xC73FFF") end,
+		maxhp=function() return 1 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x0003 end,
+		LivesWhichRAM=function() return "m68000 : ram : 0xC70000-0xC73FFF" end,
+		maxlives=function() return 6 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+	},
 	['Monopoly_NES']={ -- Monopoly (NES)
 		func=Monopoly_NES_swap,
 		delay=120, -- higher than normal to help player process reason for swap!
@@ -4405,6 +4420,18 @@ local gamedata = {
 		maxlives = function() return 9 end,
 		ActiveP1 = function() return true end,
 	},
+	['SilverSurfer_NES']={ -- Silver Surfer
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return 1 end,
+		p1getlc=function() return memory.read_u8(0x0612, "RAM") end,
+		maxhp=function() return 1 end,
+		gmode=function() return memory.read_u8(0x03D6, "RAM")==32 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x0612 end,
+		LivesWhichRAM=function() return "RAM" end,
+		maxlives=function() return 3 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+	},
 	['SNAKE_RATTLE_N_ROLL_NES']={ -- Snake Rattle 'N' Roll, NES
 		func=singleplayer_withlives_swap,
 		p1gethp=function() return memory.read_u8(0x61, "RAM") + 1 end, -- offset because 0 is a valid health value and we still need to change on hitting it
@@ -4603,6 +4630,25 @@ local gamedata = {
 			(memory.read_u8(0x0055, "RAM") == 3 and memory.read_u8(0x001E, "RAM") == 0) or -- p1 fails at bonus
 			(memory.read_u8(0x0055, "RAM") == 3 and memory.read_u8(0x001E, "RAM") == 0) -- p2 fails at bonus
 		end
+	},
+	['DariusTwin_SNES']={ -- Darius Twin (USA)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x00177B, "WRAM") end, -- barrier
+		p1getlc=function()
+			local livesHex = memory.read_u8(0x001068, "WRAM")
+			-- Get upper nybble, bit-shift right 4 bits
+			local tens = (livesHex & 0xF0)>>4
+			-- Just the lower nybble
+			local ones = livesHex & 0x0F
+			-- Merge 'em
+			local lives = (tens * 10) + ones
+			return lives end,
+		maxhp=function() return 255 end, -- no enforced maximum, dunno what the practical maximum is
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x001068 end,
+		LivesWhichRAM=function() return "WRAM" end,
+		maxlives=function() return 0x71 end, -- lives stored as hex
+		ActiveP1=function() return true end, -- p1 is always active!
 	},
 	['DarkwingDuck_NES']={ -- Darkwing Duck (NES)
 		func=singleplayer_withlives_swap,
@@ -6147,6 +6193,18 @@ local gamedata = {
 		maxlives=function() return 4 end,
 		ActiveP1=function() return true end, -- p1 is always active! p2 doesn't need lives so don't specify anything for them!
 		grace=50,
+	},
+	['RTypeLeo_ARC']={ -- R-Type Leo (World)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return 1 end,
+		p1getlc=function() return memory.read_u8(0x00229A, "v33 : ram : 0xE0000-0xEFFFF") end,
+		maxhp=function() return 1 end,
+		gmode=function() return memory.read_u8(0x00229D, "v33 : ram : 0xE0000-0xEFFFF")==1 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x00229A end,
+		LivesWhichRAM=function() return "v33 : ram : 0xE0000-0xEFFFF" end,
+		maxlives=function() return 6 end,
+		ActiveP1=function() return true end, -- p1 is always active!
 	},
 	['RainbowIslands_NES']={ -- Rainbow Islands - The Story of Bubble Bobble 2, NES
 		func=singleplayer_withlives_swap,

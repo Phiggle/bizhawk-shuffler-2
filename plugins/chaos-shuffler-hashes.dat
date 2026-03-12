@@ -247,6 +247,7 @@ C9EA66BB7CB30AD5343F1721B1D4D3219859319B Contra_NES                   -- Contra 
 376836361F404C815D404E1D5903D5D11F4EFF0E Contra_NES                   -- Contra NES (Japan)
 265886E3F665ADF2507E7B2F08B6B2ED9D0018B2 ContraIII_SNES               -- Contra III: The Alien Wars, SNES (US)
 78CF6D00F1147BE6DD4E8053C8143D39B24A97B3 ContraIII_SNES               -- Contra Spirits, SNES (Japan)
+46FC172C87D32F307551502277FFDCD79984A702 DariusTwin_SNES              -- Darius Twin (USA)
 7188D8CE3D8D2A0DCD7B10FBC23A6F84FA9C4161 DarkwingDuck_NES             -- Darkwing Duck NES (US)
 FEAE44098C87E5254F0BCA37CF2CA143720D6914 DarkwingDuck_NES             -- Darkwing Duck NES (US, prototype)
 5F999FB675C83C03812B53ECE0F2CA20656DFB70 DarkwingDuck_NES             -- Darkwing Duck NES (Europe)
@@ -280,6 +281,7 @@ D3EFD32B68F1FE37A82DB9D9929B7CA7CC1A3AF4 FZERO_SNES                   -- F-Zero 
 A582DF3B880A0C8DDC1CDA358C96E306C1E222BB FZERO_SNES                   -- F-Zero SNES with 3 lap hack
 3F20C2C8749CCEE3A53732B41AE026BF3AAA2158 FamilyFeud_SNES              -- Family Feud SNES (US 1.0)
 8556B6545B78022FE55705A83C3E751C463F56C7 FamilyFeud_SNES              -- Family Feud SNES (US 1.1)
+BB853862F3B9ECBE30C9696B282EFD3E6DDE6B3D FantasyZone_ARC              -- Fantasy Zone (Rev A, unprotected)
 09D97003BF9D676F24A75CF3E1DCED28CDA3BE59 IceClimber_NES               -- Ice Climber (North America, Europe)
 1690E419BC2435739EFBE59A64D83538FF7E16B4 IceClimber_NES               -- Ice Climber (Japan)
 86C392A1D9A731FA48E148AFBE60AF75F918CB5A Jackal_NES                   -- Jackal NES
@@ -314,6 +316,7 @@ BA9742A4                                 PaRappa1_PS1                 -- PaRappa
 CE0FDE21D2C418B24C3D904E57DF466E         ROCKET_KNIGHT_ADVENTURES_GEN -- Rocket Knight Adventures, Genesis
 E2DB0B04B75F19226C9D524D422143318141710A Rollergames_NES              -- Rollergames, NES (US)
 C3BD515E47137F32367F923F40139EA3F959FB93 Rollergames_NES              -- Rollergames, NES (Europe)
+71FA0CE2D49870C3D64130D572854EBB5F25C54C SilverSurfer_NES             -- Silver Surfer
 3A95FA7BAB8AA16E43A5652158ABEC2B74B277B4 SNAKE_RATTLE_N_ROLL_NES      -- Snake Rattle 'N' Roll, NES (North America)
 8E37429077AEDE24A635AF20AD9B7E43B52D1FB9 SNAKE_RATTLE_N_ROLL_NES      -- Snake Rattle 'N' Roll, NES (Europe)
 ACF534C0162FC06EAF9EFCE0C5AEF2E924504720 SNAKE_RATTLE_N_ROLL_NES      -- Snake Rattle 'N' Roll, NES (North America, Isometric D-Pad Adjustment Hack/Improvement)
@@ -432,6 +435,7 @@ CBD35C583D99D2181F0E482666ADFF3FB8456D74 PowerBlade2_NES              -- Power B
 36D4512E6151013EBE726D66CF1FE099         Powerslave_SAT               -- Powerslave (Saturn, NTSC-U)
 E1006032B1B8C89135A9C0A78A98362F         Exhumed_SAT                  -- Exhumed (Saturn, PAL)
 8CCFCC68DFF1100D91711B93C0B642AB         Seireki1999_SAT              -- Seiriki 1999: Pharaoh no Fukkatsu (Saturn, NTSC-J)
+F866359731E4A0DF02BCFDC5C569A414C2F1515E RTypeLeo_ARC                 -- R-Type Leo (World)
 FFD2213439AA3818E88215FAC318B15616F9E894 RainbowIslands_NES           -- Rainbow Islands (US)
 85D9D0F0                                 ResidentEvil_PS1             -- Resident Evil, PS1 (NTSC)
 F69C55B0                                 ResidentEvil_PS1             -- Resident Evil Director's Cut, PS1 (NTSC)
