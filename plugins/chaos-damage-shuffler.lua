@@ -137,6 +137,7 @@ plugin.description =
 	-Anticipation (NES), up to 4 players, shuffles on incorrect player answers, correct CPU answers, and running out of time.
 	-Arkanoid: Doh it Again (SNES), 1p
 	-Astro Boy - Omega Factor (USA) (GBA), 1p
+	-Bakuretsu Muteki Bangaioh (Japan) (N64), 1p
 	-Banjo-Kazooie (N64), 1p
 	-Bao Qing Tian (Ch) (NES), 1p
 	-Batman (NES), 1p
@@ -154,6 +155,7 @@ plugin.description =
 	-Chip and Dale Rescue Rangers 2 (NES), 1-2p
 	-Crash Bandicoot 1-3 (PSX), 1p, US version
 	-Crash Bandicoot 4 (Bootleg) (NES), 1p
+	-Cybernator (USA) (SNES), 1p
 	-Darkwing Duck (NES), 1p
 	-Demon's Crest (SNES), 1p
 	-Dick Tracy (NES), 1p
@@ -229,6 +231,7 @@ plugin.description =
 	-Power Blade (NES), 1p
 	-Power Blade 2 (NES), 1p
 	-Powerslave/Exhumed, Saturn
+	-Psycho-Nics Oscar (World revision 0) (Arcade), 1p
 	-Rainbow Islands - The Story of Bubble Bobble 2 (NES), 1p
 	-Resident Evil (PSX), 1p - includes OG, Director's Cut, Dualshock and True Director's Cut Hack
 	-Resident Evil 2 (PSX), 1p - includes Regular & DualShock Ver (recommend using multi-disk bundler to work between disks)
@@ -240,6 +243,7 @@ plugin.description =
 	-Rubble Saver II (GB), 1p
 	-Sanrio World Smash Ball! (SNES), 1-2p
 	-Saturday Night Slam Masters (SNES), 1p
+	-SD Gundam Psycho Salamander no Kyoui (Arcade), 1p
 	-SD Gundam Sangokushi Rainbow Tairiku Senki (Japan) (Arcade), 1p
 	-Shaq-Fu (Genesis/Mega Drive), 1p
 	-Shatterhand (NES), 1p
@@ -287,6 +291,7 @@ plugin.description =
 	-Wild Guns (SNES), 1p
 	-Windjammers / Flying Power Disc (Arcade), 1p
 	-Wit's (NES), 1p
+	-Wolf Fang SS - Kuuga 2001 (Japan) (Saturn), 1p
 
 	NICHE ZONE
 	- NES 240p Suite: shuffles on every second that passes in Stopwatch Mode. Can be useful for testing a single game.
@@ -4604,6 +4609,19 @@ local gamedata = {
 			(memory.read_u8(0x0055, "RAM") == 3 and memory.read_u8(0x001E, "RAM") == 0) -- p2 fails at bonus
 		end
 	},
+	['AssaultValken_SNES']={ -- Cybernator, SNES (USA)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u16_le(0x0014CA, "WRAM") end,
+		p1getlc=function() return memory.read_u8(0x0001FA, "WRAM") end,
+		maxhp=function() return 256 end,
+		gmode=function() return memory.read_u8(0x001B6C, "WRAM")==1 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x0001FA end,
+		LivesWhichRAM=function() return "WRAM" end,
+		maxlives=function() return 9 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+		grace=15,
+	},
 	['DarkwingDuck_NES']={ -- Darkwing Duck (NES)
 		func=singleplayer_withlives_swap,
 		maxhp=function() return 4 end,
@@ -7306,6 +7324,16 @@ local gamedata = {
 			return false
 		end,
 	},
+	['RohgaArmorForce_SAT']={ -- Wolf Fang SS - Kuuga 2001 (Japan)
+		func=health_swap,
+		is_valid_gamestate=function() return memory.read_u8(0x0557E1, "Work Ram High")==32 end,
+		get_health=function() return memory.read_u8(0x060905, "Work Ram High") end,
+		other_swaps=function()
+			-- There are no actual lives, so instead shuffle when the continue screen appears.
+			local _, continuescreen_cur, continuescreen_prev = update_prev('continuescreen', memory.read_u8(0x055730, "Work Ram High"))
+			return continuescreen_cur == 64 and continuescreen_prev == 0
+		end,
+	},
 	['MagicalQuestMickey1_SNES']={ -- The Magical Quest Starring Mickey Mouse (SNES)
 		func=health_swap,
 		get_health=function() return mainmemory.read_u8(0x2B1) end,
@@ -7694,6 +7722,18 @@ local gamedata = {
 		end,
 		grace=90,
 	},
+	['PsychoNicsOscar_ARC']={ -- Psycho-Nics Oscar (World revision 0)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x0042, "hd6309 : ram : 0x0-0xEFF") end,
+		p1getlc=function() return memory.read_u8(0x007D, "hd6309 : ram : 0x0-0xEFF") end,
+		maxhp=function() return 5 end,
+		gmode=function() return memory.read_u8(0x0015, "hd6309 : ram : 0x0-0xEFF")==128 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x007D end,
+		LivesWhichRAM=function() return "RAM" end,
+		maxlives=function() return 5 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+	},
 	['EarnestEvans_SCD']={ -- Earnest Evans, Mega CD
 		func=singleplayer_withlives_swap,
 		p1gethp=function() return math.max((64 * memory.read_s16_be(0xA4AE, "68K RAM")) + memory.read_u16_be(0xA4B0, "68K RAM"), -1) end,
@@ -8049,6 +8089,61 @@ local gamedata = {
 		get_health=function() return memory.read_u32_le(0x2802, "IWRAM") end,
 		other_swaps=function() return false end,
 	},
+	['BangaiO_N64']={ -- Bakuretsu Muteki Bangaioh (Japan)
+		func=health_swap,
+		is_valid_gamestate=function() return memory.read_u8(0x0A6847, "RDRAM")==160 end,
+		get_health=function()
+			-- health is stored separately by level
+			local currstage = memory.read_u8(0x147DEB, "RDRAM")
+			if currstage == 1 then return memory.read_s8(0x1E4B39, "RDRAM")
+				elseif currstage == 2 then return memory.read_s8(0x1E1DB9, "RDRAM")
+				elseif currstage == 3 then return memory.read_s8(0x1E4D39, "RDRAM")
+				elseif currstage == 4 then return memory.read_s8(0x1E11B9, "RDRAM")
+				elseif currstage == 5 then return memory.read_s8(0x1E3639, "RDRAM")
+				elseif currstage == 6 then return memory.read_s8(0x1E4EB9, "RDRAM")
+				elseif currstage == 7 then return memory.read_s8(0x1E5D39, "RDRAM")
+				elseif currstage == 8 then return memory.read_s8(0x1E2839, "RDRAM")
+				elseif currstage == 9 then return memory.read_s8(0x1EB3B9, "RDRAM")
+				elseif currstage == 10 then return memory.read_s8(0x1E5439, "RDRAM")
+				elseif currstage == 11 then return memory.read_s8(0x1E1EB9, "RDRAM")
+				elseif currstage == 12 then return memory.read_s8(0x1FA6B9, "RDRAM")
+				elseif currstage == 13 then return memory.read_s8(0x1EAE39, "RDRAM")
+				elseif currstage == 14 then return memory.read_s8(0x1E2EB9, "RDRAM")
+				elseif currstage == 15 then return memory.read_s8(0x1E2739, "RDRAM")
+				elseif currstage == 16 then return memory.read_s8(0x1E53B9, "RDRAM")
+				elseif currstage == 17 then return memory.read_s8(0x1E2739, "RDRAM")
+				elseif currstage == 18 then return memory.read_s8(0x1E1CB9, "RDRAM")
+				elseif currstage == 19 then return memory.read_s8(0x1E4439, "RDRAM")
+				elseif currstage == 20 then return memory.read_s8(0x1F7239, "RDRAM")
+				elseif currstage == 21 then return memory.read_s8(0x1E49B9, "RDRAM")
+				elseif currstage == 22 then return memory.read_s8(0x1E40B9, "RDRAM")
+				elseif currstage == 23 then return memory.read_s8(0x1E9C39, "RDRAM")
+				elseif currstage == 24 then return memory.read_s8(0x1E2939, "RDRAM")
+				elseif currstage == 25 then return memory.read_s8(0x1E4D39, "RDRAM")
+				elseif currstage == 26 then return memory.read_s8(0x1E7FB9, "RDRAM")
+				elseif currstage == 27 then return memory.read_s8(0x1E2B39, "RDRAM")
+				elseif currstage == 28 then return memory.read_s8(0x1E25B9, "RDRAM")
+				elseif currstage == 29 then return memory.read_s8(0x1E1EB9, "RDRAM")
+				elseif currstage == 30 then return memory.read_s8(0x1E38B9, "RDRAM")
+				elseif currstage == 31 then return memory.read_s8(0x1F5639, "RDRAM")
+				elseif currstage == 32 then return memory.read_s8(0x1E4239, "RDRAM")
+				elseif currstage == 33 then return memory.read_s8(0x1E4EB9, "RDRAM")
+				elseif currstage == 34 then return memory.read_s8(0x1E16B9, "RDRAM")
+				elseif currstage == 35 then return memory.read_s8(0x1FABB9, "RDRAM")
+				elseif currstage == 36 then return memory.read_s8(0x1EA739, "RDRAM")
+				elseif currstage == 37 then return memory.read_s8(0x1FC639, "RDRAM")
+				elseif currstage == 38 then return memory.read_s8(0x1EBCB9, "RDRAM")
+				elseif currstage == 39 then return memory.read_s8(0x1F50B9, "RDRAM")
+				elseif currstage == 40 then return memory.read_s8(0x1E2039, "RDRAM")
+				elseif currstage == 41 then return memory.read_s8(0x1F02B9, "RDRAM")
+				elseif currstage == 42 then return memory.read_s8(0x1FD7B9, "RDRAM")
+				elseif currstage == 43 then return memory.read_s8(0x1E97B9, "RDRAM")
+				elseif currstage == 44 then return memory.read_s8(0x1E4539, "RDRAM")
+				end
+			return -2 end, -- failsafe, shouldn't be used
+		other_swaps=function() return false end,
+		grace=20,
+	},
 	['JurassicPark1_SNES']={ -- Jurassic Park, SNES (USA)
 		func=singleplayer_withlives_swap,
 		p1gethp=function() return 240 - memory.read_u8(0x0002EB, "WRAM") end, -- value stored appears to be damage, not health, so it needs to be inverted
@@ -8099,7 +8194,19 @@ local gamedata = {
 		-- if the player has his wife (the fairy), she revives him on death, so she's expended instead of a life. goes from 0 when disabled to 19 when enabled
 		local wife_changed, wife_cur, wife_prev = update_prev('wife', memory.read_u8(0x0006A7, "WRAM"))
 		return (wife_changed and wife_cur == 0 and wife_prev == 19) end,
-	},	
+	},
+	['GundamSalamander_ARC']={ -- SD Gundam Psycho Salamander no Kyoui
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x216D, "m68000 : ram : 0x80000-0x8BFFF") end,
+		p1getlc=function() return memory.read_u8(0x2192, "m68000 : ram : 0x80000-0x8BFFF") end,
+		maxhp=function() return 32 end,
+		gmode=function() return memory.read_u8(0x5CB9, "m68000 : ram : 0x80000-0x8BFFF")==4 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x2192 end,
+		LivesWhichRAM=function() return "m68000 : ram : 0x80000-0x8BFFF" end,
+		maxlives=function() return 69 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+	},
 	['GundamRainbow_ARC']={ -- SD Gundam Sangokushi Rainbow Tairiku Senki (Japan), arcade
 		func=singleplayer_withlives_swap,
 		p1gethp=function() return 0 end,
