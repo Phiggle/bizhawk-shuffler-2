@@ -7872,9 +7872,17 @@ local gamedata = {
 	},
 	['AstroBoyOmegaFactor_GBA']={ -- Astro Boy - Omega Factor, GBA (USA)
 		func=health_swap,
-		is_valid_gamestate=function() return true end,
-		get_health=function() return memory.read_u32_le(0x2802, "IWRAM") end,
-		other_swaps=function() return false end,
+		is_valid_gamestate=function() 
+			-- max health changes depending on difficulty mode. prevent shuffling when different difficulty modes are selected
+			local max_health_changed, max_health_curr, max_health_prev = update_prev('max_health', memory.read_u8(0x2806, "IWRAM"))
+			return not max_health_changed end,
+		get_health=function() return memory.read_u8(0x2802, "IWRAM") end,
+		other_swaps=function() 
+			-- shuffle on missing the qte in the battle with blue knight
+			local qtestate_changed, qtestate_curr, qtestate_prev = update_prev('qtestate', memory.read_u8(0x5219, "IWRAM"))
+			
+			return memory.read_u8(0x12E3, "IWRAM")==4 and  memory.read_u8(0x12E4, "IWRAM")==5 -- indicate that we're in the blue knight fight (row 4, column 5 on select screen)
+			and qtestate_changed and qtestate_curr==88 end, -- indicate that we've changed to the dying state from failed qte
 	},
 	['JurassicPark1_SNES']={ -- Jurassic Park, SNES (USA)
 		func=singleplayer_withlives_swap,
