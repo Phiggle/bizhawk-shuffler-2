@@ -8232,7 +8232,6 @@ local gamedata = {
 	['CVLegends_GB']={ -- Castlevania Legends, GB
 		func=singleplayer_withlives_swap,
 		gmode=function() return true end,
-		-- if boss health > 0, we won't be counting down and ticking off health at the end of the level
 		p1gethp=function() return memory.read_u8(0x513, "WRAM") end,
 		p1getlc=function() return memory.read_u8(0x754, "WRAM") end,
 		maxhp=function() return 14 end,
@@ -8245,7 +8244,6 @@ local gamedata = {
 	['CVChronicles_PSX']={ -- Castlevania Chronicles, PSX
 		func=singleplayer_withlives_swap,
 		gmode=function() return mainmemory.read_u8(0x059286) >= 0x0f and mainmemory.read_u8(0x059286) <= 0x17 end,
-		-- if boss health > 0, we won't be counting down and ticking off health at the end of the level
 		p1gethp=function() return mainmemory.read_u8(0x05A822) end,
 		p1getlc=function() return mainmemory.read_u8(0x059292) end,
 		maxhp=function() return 16 end,
