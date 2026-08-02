@@ -172,6 +172,7 @@ plugin.description =
 	-Ghouls'n Ghosts (Genesis/Mega Drive), 1p
 	-Gimmick! (NES/Famicom), 1p
 	-Goof Troop (SNES), 1-2p
+	-Granada (Mega Drive/Genesis), 1p
 	-Gremlins 2: The New Batch (NES), 1p
 	-Gunstar Heroes (Genesis/Mega Drive), 1p
 	-Hammerin' Harry (NES), 1p
@@ -7008,6 +7009,18 @@ local gamedata = {
 		maxlives=function() return 10 end,
 		ActiveP1=function() return memory.read_u8(0x00BD, "WRAM") & 1 ~= 0 end,
 		ActiveP2=function() return memory.read_u8(0x00BD, "WRAM") & 2 ~= 0 end,
+	},
+	['Granada_GEN']={ -- Granada, GEN (JU) (REV00) [!]
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x00B455, "68K RAM") end,
+		p1getlc=function() return memory.read_u8(0x00B457, "68K RAM") end,
+		maxhp=function() return 15 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x00B457 end, -- for a larger penalty, provide unlimited continues using address 0x00FE03 (maximum of 9)
+		LivesWhichRAM=function() return "68K RAM" end,
+		maxlives=function() return 10 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+		grace=15,
 	},
 	['SatNightSlamMasters_SNES']={ -- Saturday Night Slam Masters, SNES - 1p (for now)
 		func=health_swap,
