@@ -270,6 +270,7 @@ plugin.description =
 	-The Magical Quest Starring Mickey Mouse (SNES), 1-2p
 	-The Magical Quest 2: The Great Circus Mystery Starring Mickey & Minnie (SNES), 1-2p
 	-The Magical Quest 3: Mickey to Donald - Magical Adventure 3 (SNES), 1-2p
+	-The Speed Rumbler (Arcade), 1p
 	-Tiny Toon Adventures (NES), 1p
 	-Titenic (bootleg) (NES), 1p
 	-Trip World (GB) and Trip World DX (GBC), 1p
@@ -7172,6 +7173,24 @@ local gamedata = {
 		maxlives=function() return 10 end, -- one more than displayed
 		ActiveP1=function() return mainmemory.read_u8(0x400) > 0 end,
 		ActiveP2=function() return mainmemory.read_u8(0x500) > 0 end,
+	},
+	['SpeedRumbler_ARC']={ -- The Speed Rumbler (set 1)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return 56 - memory.read_u8(0x04BC, "mc6809 : ram : 0x0-0x1DFF") end, -- vehicle health is measured as damage; 0 is starting health value
+		p1getlc=function() return memory.read_u8(0x00AF, "mc6809 : ram : 0x0-0x1DFF") end,
+		maxhp=function() return 56 end,
+		swap_exceptions=function()
+			--[[ when damage reaches 40 (health = 56 - 40 = 16), the vehicle catches fire; while damage is still at or over 40, the player continues to take 1 damage every few
+			frames. I didn't identify a clear variable for the countdown to damage loss, so to prevent constant shuffling, we'll suppress shuffles for single point damage when
+			on fire ]]
+			local vehiclehealth_changed, vehiclehealth_curr, vehiclehealth_prev = update_prev('vehiclehealth', 56 - memory.read_u8(0x04BC, "mc6809 : ram : 0x0-0x1DFF"))
+			return vehiclehealth_curr <= 16 and vehiclehealth_changed and vehiclehealth_curr == vehiclehealth_prev - 1 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x00AF end,
+		LivesWhichRAM=function() return "mc6809 : ram : 0x0-0x1DFF" end,
+		maxlives=function() return 5 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+		grace=45,
 	},
 	['TwistedMetal2_PSX']={ -- Twisted Metal 2, PSX
 		func=singleplayer_withlives_swap,
