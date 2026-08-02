@@ -49,6 +49,7 @@ plugin.description =
 	-Super Mario World 2: Yoshi's Island (SNES), 1p plus 2p secret mini battles
 	--- check toggle for whether you want mini battle damage/losses to swap!
 	-Super Mario All-Stars (SNES), 1-2p, with or without World (includes SMB3 battle mode)
+	-Super Mario World (Hummer Team bootleg), 1p
 	-Super Mario Land (GB or GBC DX patch), 1p
 	-Super Mario Land 2: 6 Golden Coins (GB or GBC DX patch), 1p
 	-Super Mario 64 (N64), 1p - including Better Non-Stop hack
@@ -2938,6 +2939,26 @@ local gamedata = {
 				return false
 			end
 		end,
+	},
+	['HummerMarioWorld_NES']={ -- Super Mario World (Asia) (En) (Pirate)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return 1 end, 
+		p1getlc=function() return memory.read_u8(0x036A, "RAM") end,
+		maxhp=function() return 1 end,
+		minhp=-1,
+		gmode=function() return memory.read_u8(0x0602, "RAM")==247 end,
+		other_swaps=function()
+			-- current power up: 0 = small mario, 1 = super mario, 2 = fire mario, 3 = cape mario
+			local powerup_changed, powerup_curr, powerup_prev = update_prev('powerup', memory.read_u8(0x0624, "RAM"))
+			
+			-- swap only when player is returned to small mario form, not switches between powerups
+			if powerup_changed and powerup_curr==0 then return true end
+			return false end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x036A end,
+		LivesWhichRAM=function() return "RAM" end,
+		maxlives=function() return 69 end,
+		ActiveP1=function() return true end, -- p1 is always active!
 	},
 	['SML1_GB']={ -- Super Mario Land, including DX hack for Game Boy Color
 		func=sml1_swap,
