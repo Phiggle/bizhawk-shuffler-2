@@ -262,6 +262,7 @@ plugin.description =
 	-Super Smash TV (SNES), 1p
 	-TaleSpin (NES), 1p
 	-Tarzan: Lord of the Jungle (unreleased) (SNES), 1p
+	-Tatakae! Chou Robotto Seimeitai Transformers: Convoy no Nazo (NES), 1p
 	-Tecmo Super Bowl (NES), 1p (on opponent scores, giveaways, giving up first down, failing to get a first down)
 	-Teenage Mutant Ninja Turtles (NES), 1p
 	-Teenage Mutant Ninja Turtles II: The Arcade Game (NES), 1-2p
@@ -7340,6 +7341,22 @@ local gamedata = {
 			local pointer = memory.read_u32_le(0xD8C58, "MainRAM") & 0xFFFFFF
 			return memory.read_u16_le(pointer + 0x170, "MainRAM")
 		end,
+	},
+	['MysteryOfConvoy_NES']={ -- Tatakae! Chou Robotto Seimeitai Transformers: Convoy no Nazo
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return 1 end,
+		p1getlc=function() return memory.read_u8(0x0069, "RAM") end,
+		maxhp=function() return 1 end,
+		other_swaps=function()
+			-- barrier powerup gives some extra health, but damage counter doesn't seem to be exclusively used for tracking barrier damage
+			local hasbarrier_changed, hasbarrier_cur, hasbarrier_prev = update_prev('hasbarrier', memory.read_s8(0x0053, "RAM")==0x60)
+			local barrierdamage_changed, barrierdamage_cur, barrierdamage_prev = update_prev('barrierdamage', memory.read_s8(0x0054, "RAM"))
+			return barrierdamage_changed and hasbarrier_prev and barrierdamage_cur > barrierdamage_prev end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x0069 end,
+		LivesWhichRAM=function() return "RAM" end,
+		maxlives=function() return 70 end,
+		ActiveP1=function() return true end, -- p1 is always active!
 	},
 	['TecmoSuperBowl_NES']={ -- Tecmo Super Bowl NES
 		func=TecmoSuperBowl_NES_swap,
