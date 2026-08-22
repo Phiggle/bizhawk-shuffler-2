@@ -190,6 +190,9 @@ plugin.description =
 	-Jungle Book, The (NES, SNES, Genesis/Mega Drive), 1p
 	-Jurassic Park (SNES), 1p
 	-Kabuki Quantum Fighter (NES), 1p
+	-King of the Monsters, (arcade), 1p
+	-King of the Monsters 2 - The Next Thing (Arcade), 1p
+	-King of the Monsters 2 (Genesis/Mega Drive), 1p
 	-Kuru Kuru Kururin (GBA), 1p
 	-Last Alert (TG-16 CD), 1p
 	-Little Samson (NES), 1p
@@ -5414,6 +5417,70 @@ local gamedata = {
 			if (memory.read_u8(0x355, "RAM") == 0x80) then return true end
 			return false
 		end,
+	},
+	['KingOfTheMonsters_ARC']={ -- King of the Monsters, arcade (set 1)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x00206B, "m68000 : ram : 0x100000-0x10FFFF") end,
+		p1getlc=function()
+			--(binary-coded decimal conversation taken from Bubsy Jaguar implementation)
+			-- Need to convert binary-coded decimal hexadecimal value to just plain decimal
+			local livesHex = memory.read_u8(0x000034, "m68000 : ram : 0xD00000-0xD0FFFF")
+			-- Get upper nybble, bit-shift right 4 bits
+			local tens = (livesHex & 0xF0)>>4
+			-- Just the lower nybble
+			local ones = livesHex & 0x0F
+			-- Merge 'em
+			local lives = (tens * 10) + ones
+			return lives end,
+		maxhp=function() return 60 end,
+		gmode=function() return memory.read_u8(0x00005A, "m68000 : ram : 0x100000-0x10FFFF")==48 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+		grace=30,
+	},
+	['KingOfTheMonsters2_ARC']={ -- King of the Monsters 2 - The Next Thing (NGM-039 ~ NGH-039)
+		func=function() return function()
+			local health_changed, health_curr, health_prev = update_prev('health', memory.read_u8(0x001417, "m68000 : ram : 0x100000-0x10FFFF"))
+			local lives_changed, lives_curr, lives_prev = update_prev('lives', memory.read_u8(0x0013B8, "m68000 : ram : 0x100000-0x10FFFF"))
+			local credits_changed, credits_curr, credits_prev = update_prev('credits', memory.read_u8(0x000034, "m68000 : ram : 0xD00000-0xD0FFFF"))
+			
+			local gmode = memory.read_u8(0x0013B4, "m68000 : ram : 0x100000-0x10FFFF")==255
+			
+			local maxhp=64
+			
+			if gmode then
+				if health_changed and health_curr > 0 and health_curr <= maxhp then
+					if health_curr < health_prev then return true end
+				end
+				
+				if lives_changed and health_prev == 0 then	
+					if lives_curr == lives_prev - 1 then return true end
+				end
+			
+				if credits_changed and health_prev == 0 and lives_prev == 0 then
+					if credits_curr < credits_prev then return true end
+				end
+			end
+			return false end
+		end,
+		CanHaveInfiniteLives=false, -- infinite lives not provided to enable character switching, coins can't be pushed
+		p1livesaddr=function() return 0x0013B8 end,
+		LivesWhichRAM=function() return "m68000 : ram : 0xD00000-0xD0FFFF" end,
+		maxlives=function() return 69 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+		grace=30,
+	},
+	['KingOfTheMonsters2_GEN']={ -- King of the Monsters 2 (U) [!]
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x000993, "68K RAM") end,
+		p1getlc=function() return 2 - memory.read_u8(0x000533, "68K RAM") end, -- p2 rounds won
+		maxhp=function() return 80 end,
+		swap_exceptions=function() return memory.read_u8(0x000933, "68K RAM")==27 end, -- suppress shuffling when player is blocking
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x00051D end, -- continues
+		LivesWhichRAM=function() return "68K RAM" end,
+		maxlives=function() return 69 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+		grace=20,
 	},
 	['GhostsnGoblins_NES']={ -- Ghosts n' Goblins, NES
 		func=singleplayer_withlives_swap,
