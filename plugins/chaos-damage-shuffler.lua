@@ -174,6 +174,7 @@ plugin.description =
 	-Goof Troop (SNES), 1-2p
 	-Gremlins 2: The New Batch (NES), 1p
 	-Gunstar Heroes (Genesis/Mega Drive), 1p
+	-Hajime no Ippo - The Fighting! (Patched) (GBA), 1p
 	-Hammerin' Harry (NES), 1p
 	-Hercules II (bootleg) (Genesis/Mega Drive), 1p
 	-High Seas Havoc (Genesis/Mega Drive), 1p
@@ -208,6 +209,7 @@ plugin.description =
 	-Metal Slug - Super Vehicle-001 (Arcade), 1p
 	-Metal Storm (NES), 1p
 	-Mighty Morphin Power Rangers - The Movie (SNES), 1p
+	-Mike Tyson's Punch-Out!! (NES), 1p
 	-Minnesota Fats - Pool Legend (Saturn), 1p story mode
 	-Ms. Pac-Man (Tengen) (NES), 1p
 	-Monopoly (NES), 1-8p (on one controller), shuffles on any human player going bankrupt, going or failing to roll out of jail, and losing money (not when buying, trading, or setting up game)
@@ -259,6 +261,7 @@ plugin.description =
 	-Super Mario Kart (SNES), 1-2p - shuffles on collisions with other karts (lost coins or have 0 coins), falls
 	-Sonic Mario Bros., Squirrel King mechanics (bootleg) (Genesis/Mega Drive), 1p
 	-Super Monkey Ball Jr. (GBA), 1p
+	-Super Punch-Out!! (SNES), 1p
 	-Super Smash TV (SNES), 1p
 	-TaleSpin (NES), 1p
 	-Tarzan: Lord of the Jungle (unreleased) (SNES), 1p
@@ -282,6 +285,7 @@ plugin.description =
 	-Ultimate Mortal Kombat 3 (SNES), 1p (for now)
 	-Vice: Project Doom (NES), 1p
 	-Vs. Ice Climber, set IC4-4 B-1 (Arcade), 1p
+	-Wade Hixton's Counter Punch (GBA), 1p
 	-WarioWare, Inc.: Mega Microgame$! (GBA), 1p - bonus games including 2p are pending
 	-Wild Guns (SNES), 1p
 	-Windjammers / Flying Power Disc (Arcade), 1p
@@ -2207,6 +2211,80 @@ local function PockyRocky2_SNES_swap(gamemeta)
 			data.p1hpcountdown = gamemeta.delay or 3
 		end
 
+		return false
+	end
+end
+
+local function punchout_swap(gamemeta)
+	return function(data)
+		-- if a method is provided and we are not in normal gameplay, don't ever swap
+		if gamemeta.gmode and not gamemeta.gmode() then
+			return false
+		end
+		
+		local p1currhp = gamemeta.p1gethp()
+		local currtogglecheck = 0
+		if gamemeta.gettogglecheck ~= nil then
+			currtogglecheck = gamemeta.gettogglecheck()
+		end
+	
+		local maxhp = gamemeta.maxhp()
+		local minhp = gamemeta.minhp or -1 -- minimum HP reduced so as to always shuffle on knockdown blow
+
+		-- health must be within an acceptable range to count
+		-- ON ACCOUNT OF ALL THE GARBAGE VALUES BEING STORED IN THESE ADDRESSES
+		if p1currhp < minhp or p1currhp > maxhp then
+			return false
+		end
+
+		-- retrieve previous health and lives before backup
+		local p1prevhp = data.p1prevhp
+		local prevtogglecheck = data.prevtogglecheck
+
+		data.p1prevhp = p1currhp
+		data.prevtogglecheck = currtogglecheck
+	
+		-- if we have found a toggle flag, that changes at the same time as a junk hp/lives change, then don't swap.
+		if prevtogglecheck ~= nil and prevtogglecheck ~= currtogglecheck then
+			return false
+		end
+
+		-- Sometimes you will want to update hp and lives without triggering a swap (e.g., on swapping between characters).
+		-- If a method is provided for swap_exceptions and its conditions are true, process the hp and lives but don't swap.
+		if gamemeta.swap_exceptions and gamemeta.swap_exceptions(gamemeta) then
+			return false
+		end
+		
+		-- this delay ensures that when the game ticks away health for the end of a level,
+		-- we can catch its purpose and hopefully not swap, since this isnt damage related
+		if data.p1hpcountdown ~= nil and data.p1hpcountdown > 0 then
+			data.p1hpcountdown = data.p1hpcountdown - 1
+			if data.p1hpcountdown == 0 and p1currhp > minhp then
+				return true
+			end
+		end
+		
+		if p1prevhp ~= nil and p1currhp < p1prevhp then
+			data.p1hpcountdown = gamemeta.delay or 3
+		end
+
+	
+		-- KO shuffle. player shuffles when they are counted out
+		local curr_refereecount = gamemeta.refereecount() -- timer used for referee counts, has multiple functions
+		
+		
+		-- flag is also checked to confirm that player is knocked down
+		if gamemeta.isplayerdown() and curr_refereecount == 0 and data.prev_refereecount == 1 then
+			data.p1hpcountdown = gamemeta.kodelay or 3	-- separate delay used for ko to feel more intuitive
+		end
+		data.prev_refereecount = curr_refereecount
+	
+
+		-- sometimes you want to swap for things that don't take standard health or lives, like non-standard game overs
+		if gamemeta.other_swaps and gamemeta.other_swaps() then
+			data.p1hpcountdown = gamemeta.delay or 3
+		end
+		
 		return false
 	end
 end
@@ -5100,6 +5178,31 @@ local gamedata = {
 		maxlives=function() return 69 end,
 		ActiveP1=function() return true end, -- p1 is always active!
 	},
+	['WadeHixton_GBA']={ -- Wade Hixton's Counter Punch (USA, Europe)
+		func=punchout_swap,
+		gmode=function() return memory.read_u8(0x24D2, "IWRAM") == 5 end,
+		p1gethp=function() return memory.read_u8(0x12D2, "IWRAM") end,
+		maxhp=function() return 90 end,
+		refereecount=function()
+			--[[ There are other values that more directly represent the referee's count, but they don't differentiate between the KO call and a 9 count, or don't
+			differentiate between the KO call and when the timer's not being used, so it leads to potential false shuffles when those are confused. Also some might
+			not be consistent between opponents.]]	 
+			local currcount = memory.read_u8(0x0E8D, "IWRAM")
+			if currcount == 129 then return 9 end
+			if currcount == 144 then return 8 end
+			if currcount == 162 then return 7 end
+			if currcount == 176 then return 6 end
+			if currcount == 196 then return 5 end
+			if currcount == 216 then return 4 end
+			if currcount == 232 then return 3 end
+			if currcount == 249 then return 2 end
+			if currcount == 13 then return 1 end
+			if currcount == 120 then return 0 end
+			return 10 -- catchall for other values
+		end,
+		isplayerdown=function() return memory.read_u8(0x133F, "IWRAM") == 0 end,
+		CanHaveInfiniteLives=false,
+	},
 	['WarioWare_GBA']={ -- WarioWare, Inc. / Made in Wario, GBA
 		func=singleplayer_withlives_swap,
 		p1getlc=function() return memory.read_u8(0x39D5, "IWRAM") end,
@@ -5827,6 +5930,20 @@ local gamedata = {
 		maxlives=function() return 2 end,
 		ActiveP1=function() return true end, -- p1 is always active!	
 	},
+	['HajimeNoIppo_GBA']={ -- Hajime no Ippo - The Fighting! (Patched)
+		func=health_swap,
+		is_valid_gamestate=function() return memory.read_u8(0x00E788, "EWRAM")==22 end,
+		get_health=function() return 
+			-- damage is stored instead of health, so health should be considered to be decreasing as the values go up
+			(-1 * memory.read_s8(0x00FB06, "EWRAM")) + -- red (non-recoverable) damage
+			(-1 * memory.read_s8(0x00FB02, "EWRAM")) end, -- yellow (recoverable) damage
+		other_swaps=function()
+			-- referee count when the player is knocked down; the player is knocked out when the count reaches ten
+			local refereecount_changed, refereecount_curr, refereecount_prev = update_prev('refereecount', memory.read_u8(0x3C98, "IWRAM"))
+			if refereecount_changed and refereecount_curr == 10 then return true end
+			return false end,
+		grace=25,
+	},
 	['HammerinHarry_NES']={ -- Hammerin' Harry, NES
 		func=singleplayer_withlives_swap,
 		-- add the hard hat flag (0/1) to health; hard hat gets spent if you would have lost your last HP
@@ -6472,6 +6589,24 @@ local gamedata = {
 		maxlives=function() return 69 end,
 		ActiveP1=function() return true end, -- p1 is always active!
 	},
+	['TysonPunchOut_NES']={ -- Mike Tyson's Punch-Out!!, NES (US)
+		func=punchout_swap,
+		gmode=function() return memory.read_u8(0x0040, "RAM") == 1 end,
+		p1gethp=function() return memory.read_u8(0x0391, "RAM") end,
+		maxhp=function() return 96 end,
+		refereecount=function() return memory.read_u8(0x0056, "RAM") end,
+		isplayerdown=function() return memory.read_u8(0x0071, "RAM") == 164 end,
+		kodelay=57, -- delay to be used shuffling after a player is ko'd
+		swap_exceptions=function()
+			-- prevents shuffling on a successful block necessitated since the game has some attacks which are meant to be blocked, but also has chip damage
+			return memory.read_u8(0x0050, "RAM") == 136 -- value for player's blocking state, should run to 136 on the moment of a successful block
+		end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x0173 end,
+		LivesWhichRAM=function() return "RAM" end,
+		maxlives=function() return 0 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+	},
 	['MinnesotaFatsPoolLegend_SAT']={ -- Minnesota Fats - Pool Legend (R) [Saturn]
 		func=function() return 
 		function()
@@ -7006,6 +7141,39 @@ local gamedata = {
 		LivesWhichRAM=function() return "WRAM" end,
 		p1livesaddr=function() return 0x1fb2 end,
 		maxlives=function() return 5 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+	},
+	['SuperPunchOut_SNES']={ -- Super Punch-Out!!, SNES (USA)
+		func=punchout_swap,
+		gmode=function() return memory.read_u8(0x000BAD, "WRAM") == 1 end,
+		p1gethp=function() return memory.read_u8(0x00089F, "WRAM") end,
+		maxhp=function() return 80 end,
+		gmode=function() return memory.read_u8(0x000B23, "WRAM")==1 end,
+		refereecount=function() return 10 - memory.read_u8(0x000BC2, "WRAM") end, -- count is reversed
+		isplayerdown=function() return memory.read_u8(0x0050CA, "WRAM") == 56 end,
+		swap_exceptions=function() 
+			--[[ restraining Aran Ryan's clinching to one shuffle. he first address should confirm that the clinch is currently occurring.
+			The second address is the timer for the clinch. The timer starts at 10 and the player's health is drained once before it decreases,
+			so the shuffle is allowed for that first instance of damage but disabled during the remainder of the clinch.]]
+			return memory.read_u8(0x000800, "WRAM") == 65 and memory.read_u8(0x000904, "WRAM") < 10
+		end,
+		other_swaps=function()
+			-- shuffle when hit by Masked Muscle's spit, value changes to 4 when the filter is applied
+			local spit_status_changed, spit_status_cur, spit_status_prev = update_prev('spit_status', memory.read_u8(0x000A40, "WRAM"))
+			if spit_status_changed and spit_status_cur == 4 then return true end			
+			
+			-- shuffle when Rick Bruiser breaks your hands, value changes to 1 when hand is broken
+			local left_hand_broken, left_hand_cur, left_hand_prev = update_prev('left_hand', memory.read_u8(0x000830, "WRAM"))
+			local right_hand_broken, right_hand_cur, right_hand_prev = update_prev('right_hand', memory.read_u8(0x000831, "WRAM"))
+			if left_hand_broken and left_hand_cur == 1 then return true end
+			if right_hand_broken and right_hand_cur == 1 then return true end
+			
+			return false
+		end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x000606 end,
+		LivesWhichRAM=function() return "WRAM" end,
+		maxlives=function() return 9 end,
 		ActiveP1=function() return true end, -- p1 is always active!
 	},
 	['SuperSmashTV_SNES']={ -- Super Smash T.V., SNES
@@ -8176,7 +8344,17 @@ function plugin.on_game_load(data, settings)
 			end 
 		end
 	end
-	
+
+	-- Super Punch-Out!! (SNES)
+	if tag == "SuperPunchOut_SNES" then
+		-- force current circuit losses to zero so special circuit is always unlocked
+		-- player must have zero losses on each prior circuit to unlock special circuit
+		if settings.InfiniteLives == true
+		and memory.read_u8(0x000BAD, "WRAM") == 1 then -- gmode
+			memory.write_u8(0x000605, 0, "WRAM")
+		end
+	end
+
 
 	-- first time through with a bad match, tag will be nil
 	-- can use this to print a debug message only the first time
