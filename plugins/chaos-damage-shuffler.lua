@@ -400,6 +400,16 @@ local bt_snes_level_names = { "Khaos Mountains",
 local bt_snes_level_recoder = { 0, 1, 2, 3, 4, 6, 8, 7 } -- THIS GAME DOESN'T STORE LEVELS IN THE ORDER YOU PLAY THEM, COOL
 ---------------
 
+-- If value is a function, call the function and return its return value. Otherwise, return value itself.
+-- Passes through any additional paramters to the function.
+local function getval(value, ...)
+	if type(value) == "function" then
+		return value(...)
+	else
+		return value
+	end
+end
+
 -- update value in prevdata and return whether the value has changed, new value, and old value
 -- value is only considered changed if it wasn't nil before
 local function update_prev(key, value)
@@ -8011,6 +8021,44 @@ local function get_game_tag()
 	return nil
 end
 
+local function apply_infinite_lives(gamemeta)
+	if not gamemeta.CanHaveInfiniteLives then
+		return
+	end
+
+	if gamemeta.ApplyInfiniteLives then
+		-- custom implementation for complicated games
+		gamemeta.ApplyInfiniteLives(gamemeta)
+		return
+	end
+
+	local ActiveP1 = getval(gamemeta.ActiveP1)
+	local ActiveP2 = getval(gamemeta.ActiveP2)
+	if gamemeta.ActiveP1 == nil and gamemeta.ActiveP2 == nil then
+		ActiveP1 = true -- assume P1 is always active if nothing is specified
+	end
+	local maxlives = getval(gamemeta.maxlives) or error("Missing maxlives")
+	local LivesWhichRAM = getval(gamemeta.LivesWhichRAM) or mainmemory.getname() -- default to main ram
+
+	-- allow specifying different read_*/write_* functions
+	local livesformat = getval(gamemeta.livesformat) or 'u8'
+	local read_func = memory['read_'..livesformat] or error('Invalid livesformat: '..livesformat)
+	local write_func = memory['write_'..livesformat] or error('Invalid livesformat: '..livesformat)
+
+	local function apply(address)
+		if read_func(address, LivesWhichRAM) < maxlives then
+			write_func(address, maxlives, LivesWhichRAM)
+		end
+	end
+
+	if ActiveP1 then
+		apply(getval(gamemeta.p1livesaddr) or error("Missing p1livesaddr"))
+	end
+	if ActiveP2 then
+		apply(getval(gamemeta.p2livesaddr) or error("Missing p2livesaddr"))
+	end
+end
+
 local function BT_NES_Zitz_Override()
 	if tag == "BT_NES" -- unpatched Battletoads NES
 		and memory.read_u8(0x000D, "RAM") == 11 -- in Clinger-Winger
@@ -8187,57 +8235,14 @@ function plugin.on_game_load(data, settings)
 		shouldSwap = func(gamemeta)
 		
 		-- Infinite* Lives - set lives to max on game load
-		local CanHaveInfiniteLives = gamemeta.CanHaveInfiniteLives
-		
 		if settings.InfiniteLives == true -- is infinite lives enabled?
-			and CanHaveInfiniteLives == true -- can this game can do infinite lives?
+			and gamemeta.CanHaveInfiniteLives == true -- can this game can do infinite lives?
 		then
 			-- returns the number of games left in the shuffler
 			-- this will be key for how infinite lives are handled at the end!
 			gamesleft = #(get_games_list())
 
-			local ActiveP1 = false
-			if gamemeta.ActiveP1 then
-				ActiveP1 = gamemeta.ActiveP1()
-			end
-			local ActiveP2 = false
-			if gamemeta.ActiveP2 then
-				ActiveP2 = gamemeta.ActiveP2()
-			end
-			local p1livesaddr = nil
-			if gamemeta.p1livesaddr then
-				p1livesaddr = gamemeta.p1livesaddr()
-			end
-			local p2livesaddr = nil
-			if gamemeta.p2livesaddr then
-				p2livesaddr = gamemeta.p2livesaddr()
-			end
-			local maxlives = nil
-			if gamemeta.maxlives then
-				maxlives = gamemeta.maxlives()
-			end
-			local LivesWhichRAM = nil
-			if gamemeta.LivesWhichRAM then
-				LivesWhichRAM = gamemeta.LivesWhichRAM()
-			end
-			
-			-- enable Infinite* Lives for p1 if checked and able
-			if ActiveP1 == true -- is p1 on?
-				and p1livesaddr ~= nil -- is an address specified for p1?
-			then -- if so, set lives to max specified
-				if LivesWhichRAM ~= nil then
-					memory.writebyte(p1livesaddr, maxlives, LivesWhichRAM)
-				end
-			end
-			
-			-- enable Infinite* Lives for p2 if checked and able
-			if ActiveP2 == true -- is p1 on?
-				and p2livesaddr ~= nil -- is an address specified for p1?
-			then -- if so, set lives to max specified
-				if LivesWhichRAM ~= nil then
-					memory.writebyte(p2livesaddr, maxlives, LivesWhichRAM)
-				end
-			end
+			apply_infinite_lives(gamemeta)
 		end
 	else
 		gamemeta = nil
@@ -8372,68 +8377,13 @@ if type(tonumber(which_level)) == "number" then
 	
 	if gamemeta then
 		-- Infinite* Lives ON FRAME - set lives to max on frame when we are either on the last game or in a game that requires it
-		local MustDoInfiniteLivesOnFrame = false
-		if gamemeta.MustDoInfiniteLivesOnFrame then MustDoInfiniteLivesOnFrame = gamemeta.MustDoInfiniteLivesOnFrame() end
-		
 		if settings.InfiniteLives == true -- is infinite lives enabled?
 			and gamemeta.CanHaveInfiniteLives == true -- can this game can do infinite lives?
 			and
-				(MustDoInfiniteLivesOnFrame == true -- can this game can do infinite lives only on frame?
+				(getval(gamemeta.MustDoInfiniteLivesOnFrame) == true -- can this game can do infinite lives only on frame?
 				or gamesleft == 1) -- are we in the last game left in the shuffler?
 		then
-			local ActiveP1 = false
-			if gamemeta.ActiveP1 then
-				ActiveP1 = gamemeta.ActiveP1()
-			end
-			local ActiveP2 = false
-			if gamemeta.ActiveP2 then
-				ActiveP2 = gamemeta.ActiveP2()
-			end
-			local p1livesaddr = nil
-			if gamemeta.p1livesaddr then
-				p1livesaddr = gamemeta.p1livesaddr()
-			end
-			local p2livesaddr = nil
-			if gamemeta.p2livesaddr then
-				p2livesaddr = gamemeta.p2livesaddr()
-			end
-			local maxlives = nil
-			if gamemeta.maxlives then
-				maxlives = gamemeta.maxlives()
-			end
-			local LivesWhichRAM = nil
-			if gamemeta.LivesWhichRAM then
-				LivesWhichRAM = gamemeta.LivesWhichRAM()
-			end
-		
-			-- enable Infinite* Lives for p1 if checked and able
-			if ActiveP1 == true -- is p1 on?
-				and p1livesaddr ~= nil -- is an address specified for p1?
-			then -- if so, let's figure out whether to set lives to max specified
-				if LivesWhichRAM ~= nil then
-					if memory.readbyte(p1livesaddr, LivesWhichRAM) < maxlives
-						and not
-						(memory.readbyte(p1livesaddr, LivesWhichRAM) ~= (maxlives - 1) and swap_scheduled == true)
-						-- let 1 frame with lives < maxlives slip through so we swap on deaths
-					then
-						memory.writebyte(p1livesaddr, maxlives, LivesWhichRAM)
-					end
-				end
-			end
-	
-			-- enable Infinite* Lives for p2 if checked and able
-			if ActiveP2 == true -- is p1 on?
-				and p2livesaddr ~= nil -- is an address specified for p1?
-			then -- if so, let's figure out whether to set lives to max specified
-				if LivesWhichRAM ~= nil then
-					if memory.readbyte(p2livesaddr, LivesWhichRAM) < maxlives
-						and not memory.readbyte(p2livesaddr, LivesWhichRAM) ~= (maxlives - 1)
-						-- let 1 frame with lives < maxlives slip through so we swap on deaths
-					then
-						memory.writebyte(p2livesaddr, maxlives, LivesWhichRAM)
-					end
-				end
-			end
+			apply_infinite_lives(gamemeta)
 		end
 
 		-- Battletoads NES
