@@ -280,6 +280,7 @@ D3EFD32B68F1FE37A82DB9D9929B7CA7CC1A3AF4 FZERO_SNES                   -- F-Zero 
 A582DF3B880A0C8DDC1CDA358C96E306C1E222BB FZERO_SNES                   -- F-Zero SNES with 3 lap hack
 3F20C2C8749CCEE3A53732B41AE026BF3AAA2158 FamilyFeud_SNES              -- Family Feud SNES (US 1.0)
 8556B6545B78022FE55705A83C3E751C463F56C7 FamilyFeud_SNES              -- Family Feud SNES (US 1.1)
+54D8DA70C5FE2BA8223FECB58803C873EA1A5AA6 FatalFury1_ARC               -- Fatal Fury - King of Fighters / Garou Densetsu - Shukumei no Tatakai (NGM-033 ~ NGH-033)
 09D97003BF9D676F24A75CF3E1DCED28CDA3BE59 IceClimber_NES               -- Ice Climber (North America, Europe)
 1690E419BC2435739EFBE59A64D83538FF7E16B4 IceClimber_NES               -- Ice Climber (Japan)
 86C392A1D9A731FA48E148AFBE60AF75F918CB5A Jackal_NES                   -- Jackal NES
@@ -314,6 +315,7 @@ BA9742A4                                 PaRappa1_PS1                 -- PaRappa
 CE0FDE21D2C418B24C3D904E57DF466E         ROCKET_KNIGHT_ADVENTURES_GEN -- Rocket Knight Adventures, Genesis
 E2DB0B04B75F19226C9D524D422143318141710A Rollergames_NES              -- Rollergames, NES (US)
 C3BD515E47137F32367F923F40139EA3F959FB93 Rollergames_NES              -- Rollergames, NES (Europe)
+998DCDF117EA63BA64FF37335A0719A4         FatmanSlaughterSport_GEN     -- Slaughter Sport (U) [c][!]
 3A95FA7BAB8AA16E43A5652158ABEC2B74B277B4 SNAKE_RATTLE_N_ROLL_NES      -- Snake Rattle 'N' Roll, NES (North America)
 8E37429077AEDE24A635AF20AD9B7E43B52D1FB9 SNAKE_RATTLE_N_ROLL_NES      -- Snake Rattle 'N' Roll, NES (Europe)
 ACF534C0162FC06EAF9EFCE0C5AEF2E924504720 SNAKE_RATTLE_N_ROLL_NES      -- Snake Rattle 'N' Roll, NES (North America, Isometric D-Pad Adjustment Hack/Improvement)

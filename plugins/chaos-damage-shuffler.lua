@@ -166,6 +166,7 @@ plugin.description =
 	-Einhänder (PSX), 1p
 	-F-Zero (SNES), 1p
 	-Family Feud (SNES), 1-2p
+	-Fatal Fury - King of Fighters / Garou Densetsu - Shukumei no Tatakai (Arcade), 1p
 	-Garfield: A Week of Garfield (NES), 1p
 	-Gargoyle's Quest II (NES), 1p
 	-Ghosts'n Goblins (NES), 1p
@@ -244,6 +245,7 @@ plugin.description =
 	-Shatterhand (NES), 1p
 	-Shinobi III (Genesis/Mega Drive), 1p
 	-Simpsons: Bart vs. the World (NES), 1p
+	-Slaughter Sport (Genesis/Mega Drive), 1p
 	-Snake Rattle 'n Roll (NES), 1p
 	-Sonic Jam 6 (bootleg) (Genesis/Mega Drive), 1p
 	-Sparkster (SNES), 1p
@@ -3899,6 +3901,20 @@ local gamedata = {
 		getwhichplayer=function() return memory.read_u8(0x08DF, "WRAM") end,
 		CanHaveInfiniteLives=false
 	},
+	['FatalFury1_ARC']={ -- Fatal Fury - King of Fighters / Garou Densetsu - Shukumei no Tatakai (NGM-033 ~ NGH-033)
+		func=health_swap,
+		is_valid_gamestate=function() 
+			-- player takes chip damage when hit by special attacks while blocking. suppress shuffling when taking chip damage, unless it ko's
+			if memory.read_u8(0x000316, "m68000 : ram : 0x100000-0x10FFFF")==142 -- marks that damage was taken when blocking
+				and memory.read_s8(0x0003B9, "m68000 : ram : 0x100000-0x10FFFF")>0 -- health is above zero
+				then return false end
+		
+			-- gmode
+			return memory.read_u8(0x00002A, "m68000 : ram : 0x100000-0x10FFFF")==54 end,
+		get_health=function() return memory.read_s8(0x0003B9, "m68000 : ram : 0x100000-0x10FFFF") end,
+		other_swaps=function() return false end,
+		grace=30,
+	},
 	['Monopoly_NES']={ -- Monopoly (NES)
 		func=Monopoly_NES_swap,
 		delay=120, -- higher than normal to help player process reason for swap!
@@ -4155,6 +4171,18 @@ local gamedata = {
 		LivesWhichRAM = function() return "RDRAM" end,
 		maxlives = function() return 9 end,
 		ActiveP1 = function() return true end,
+	},
+	['FatmanSlaughterSport_GEN']={ -- Slaughter Sport (U) [c][!]
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x002895, "68K RAM") end,
+		p1getlc=function() return memory.read_u8(0x002C30, "68K RAM") end,
+		maxhp=function() return 104 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x002C30 end,
+		LivesWhichRAM=function() return "68K RAM" end,
+		maxlives=function() return 3 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+		grace=40,
 	},
 	['SNAKE_RATTLE_N_ROLL_NES']={ -- Snake Rattle 'N' Roll, NES
 		func=singleplayer_withlives_swap,
