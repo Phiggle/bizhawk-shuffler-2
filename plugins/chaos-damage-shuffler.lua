@@ -149,6 +149,7 @@ plugin.description =
 	-Bugs Bunny: Birthday Blowout (NES), 1p
 	-Bugs Bunny: Crazy Castle (NES), 1p
 	-Captain Novolin (SNES), 1p
+	-China Warrior (TG-16), 1p
 	-Chip and Dale Rescue Rangers 1 (NES), 1-2p
 	-Chip and Dale Rescue Rangers 2 (NES), 1-2p
 	-Crash Bandicoot 1-3 (PSX), 1p, US version
@@ -197,6 +198,8 @@ plugin.description =
 	-Lion King, The (bootleg) (NES), 1p
 	-Lion King, The (SNES), 1p
 	-Lion King 2 (bootleg) (Genesis/Mega Drive), 1p
+	-Mad Stalker - Full Metal Force (TG-CD), 1p
+	-Mad Stalker - Full Metal Force (PS1), 1p
 	-Magical Kid's Doropie / Krion Conquest (NES), 1p
 	-Majuu Ou (Japan) / King of Demons (SNES), 1p
 	-Marble Madness (NES), 1-2p
@@ -207,6 +210,7 @@ plugin.description =
 	-Mendel Palace (NES), 1p
 	-Metal Slug - Super Vehicle-001 (Arcade), 1p
 	-Metal Storm (NES), 1p
+	-Mighty Morphin Power Rangers (SNES), 1p
 	-Mighty Morphin Power Rangers - The Movie (SNES), 1p
 	-Minnesota Fats - Pool Legend (Saturn), 1p story mode
 	-Ms. Pac-Man (Tengen) (NES), 1p
@@ -219,6 +223,7 @@ plugin.description =
 	-Ninja Gaiden II - The Dark Sword of Chaos (NES), 1p
 	-Ninja Gaiden III - The Ancient Ship of Doom (NES), 1p
 	-Ninjawarriors (SNES), 1p
+	-Panzer Bandit (PS1), 1p
 	-PaRappa the Rapper (PSX), 1p - shuffles on dropping a rank
 	-Pebble Beach Golf Links (Sega Saturn), 1p - Tournament Mode, shuffles after stroke
 	-Pepsiman (PSX), 1p
@@ -2407,6 +2412,17 @@ local gamedata = {
 		LivesWhichRAM=function() return "WRAM" end,
 		maxlives=function() return 3 end,
 		ActiveP1=function() return memory.read_u8(0x06C3, "WRAM") > 1 and memory.read_u8(0x06C3, "WRAM") < 3 end,
+	},
+	['ChinaWarrior_TG16']={ -- China Warrior (U)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x0BC3, "Main Memory") end,
+		p1getlc=function() return memory.read_u8(0x0BE4, "Main Memory") end,
+		maxhp=function() return 100 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x0BE4 end,
+		LivesWhichRAM=function() return "Main Memory" end,
+		maxlives=function() return 10 end,
+		ActiveP1=function() return true end, -- p1 is always active!
 	},
 	['Zelda_LTTP']={ -- The Legend of Zelda: A Link to the Past, SNES
 		func=singleplayer_withlives_swap,
@@ -5158,6 +5174,51 @@ local gamedata = {
 		-- may add a option for this in the future, but you don't lose *progress* in the story if you game over (similar to Mega Man)
 		-- would also need to consider modes that don't use lives
 	},
+	['MadStalker_TG16']={ -- Mad Stalker - Full Metal Force (Japan) (TurboGrafx-CD)
+		---[[[check that health isn't two bytes. If not, describe in PR]]]
+		func=function() return function()
+			--max health is -128 when viewed as signed, so treat as positive when at that number. health drops into the negatives when killed
+			local rawhealth = memory.read_s8(0x16D0, "Main Memory")
+			if rawhealth == -128 then rawhealth = 128 end
+			
+			local health_changed, health_curr, health_prev = update_prev('health', rawhealth)
+			local isdamaged = memory.read_u8(0x1718, "Main Memory") == 1 -- flag when player goes into a standard damaged animation
+		
+			local gmode = memory.read_u8(0x1BC7, "Main Memory") == 1
+		
+			if gmode then
+				if health_changed and isdamaged and
+					((health_curr <= -1 and health_prev > -1 ) or -- shuffle if player dies from any kind of damage
+					health_curr < (health_prev - 1)) then return true end -- shuffle if player takes more than minimal damage so not to repeatedly shuffle from machinegunners and grabs
+			end
+			
+			return false end
+		end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x0820 end,
+		LivesWhichRAM=function() return "Main Memory" end,
+		maxlives=function() return 3 end,
+		ActiveP1=function() return true end,
+		grace=20,
+	},
+	['MadStalker_PS1']={ -- Mad Stalker - Full Metal Force (Japan)
+		func=function() return function()
+			local maxhealth = 192
+			
+			--health wraps past maximum when dead, so treat as negative when above max.
+			local rawhealth = memory.read_u8(0x1BA250, "MainRAM")
+			if rawhealth > maxhealth then rawhealth = -1 end
+			
+			local health_changed, health_curr, health_prev = update_prev('health', rawhealth)
+		
+			if health_changed --[[and isdamaged]] and
+				((health_curr <= -1 and health_prev > -1 ) or -- shuffle if player dies from any kind of damage
+				health_curr < (health_prev - 1)) then return true end -- shuffle if player takes more than minimal damage so not to repeatedly shuffle from machinegunners
+			
+			return false end
+		end,
+		grace=20,
+	},
 	['MagicalDoropie_NES']={ -- Magical Doropie / Krion Conquest, NES
 		func=iframe_health_swap,
 		get_health=function() return memory.read_u8(0x004C, "RAM") end,
@@ -7524,6 +7585,18 @@ local gamedata = {
 		get_health=function() return memory.read_u8(0x0018B2, "WRAM") end,
 		other_swaps=function() return false end,
 	},
+	['PanzerBandit_PS1']={ -- Panzer Bandit (Japan)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x1DDDA0, "MainRAM") end,
+		p1getlc=function() return memory.read_u8(0x09FE48, "MainRAM") end,
+		maxhp=function() return 192 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x09FE48 end,
+		LivesWhichRAM=function() return "MainRAM" end,
+		maxlives=function() return 9 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+		grace=20,
+	},
 	['Gremlins2_NES']={ -- Gremlins 2: The New Batch, NES (US)
 		func=singleplayer_withlives_swap,
 		p1gethp=function() return memory.read_u8(0x00AD, "RAM") end,
@@ -7549,6 +7622,18 @@ local gamedata = {
 		LivesWhichRAM=function() return "RAM" end,
 		maxlives=function() return 9 end,
 		ActiveP1=function() return true end, -- p1 is always active!
+	},
+	['PowerRangers_SNES']={ -- Mighty Morphin Power Rangers (USA)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x0004C0, "WRAM") end,
+		p1getlc=function() return memory.read_u8(0x0004F2, "WRAM") end,
+		maxhp=function() return 255 end, -- health seems to be able to extend beyond visible maximum
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x0004F2 end,
+		LivesWhichRAM=function() return "WRAM" end,
+		maxlives=function() return 9 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+		grace=20,
 	},
 	['PowerRangersMovie_SNES']={ -- Mighty Morphin Power Rangers - The Movie, SNES (USA)
 		func=singleplayer_withlives_swap,
