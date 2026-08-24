@@ -172,6 +172,8 @@ plugin.description =
 	-Ghouls'n Ghosts (Genesis/Mega Drive), 1p
 	-Gimmick! (NES/Famicom), 1p
 	-Goof Troop (SNES), 1-2p
+	-Great Battle IV, The (SNES), 1p
+	-Great Battle V, The (SNES), 1p
 	-Gremlins 2: The New Batch (NES), 1p
 	-Gunstar Heroes (Genesis/Mega Drive), 1p
 	-Hammerin' Harry (NES), 1p
@@ -6944,6 +6946,45 @@ local gamedata = {
 		maxlives=function() return 10 end,
 		ActiveP1=function() return memory.read_u8(0x00BD, "WRAM") & 1 ~= 0 end,
 		ActiveP2=function() return memory.read_u8(0x00BD, "WRAM") & 2 ~= 0 end,
+	},
+	['GreatBattle4_SNES']={ -- Great Battle IV, The (Japan)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x00046C, "WRAM") end, -- used for both on foot sections and Compatikaiser sections
+		p1getlc=function() 
+			local gametype = memory.read_u8(0x000026, "WRAM")
+			
+			if gametype == 0 then return memory.read_u8(0x001CDB, "WRAM") end -- compatikaiser lives
+			return memory.read_u8(0x0000E0, "WRAM") end, -- on foot lives
+		maxhp=function() return 96 end, -- max 32 on foot, max 96 in Compatikaiser
+		gmode=function() return memory.read_u8(0x001CE3, "WRAM") == 255 end,
+		swap_exceptions=function() 
+			-- suppress shuffling when game type changes to prevent unintended shuffles due to different life counters
+			local gametype_changed, gametype_curr, gametype_prev = update_prev('gametype', memory.read_u8(0x000026, "WRAM"))
+			return gametype_changed and ((gametype_curr == 1 and gametype_prev == 0) or (gametype_curr == 0 and gametype_prev == 1)) end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function()
+			local gametype = memory.read_u8(0x000026, "WRAM")
+			
+			if gametype == 0 then return 0x001CDB end -- compatikaiser lives
+			return 0x0000E0 end, -- on foot lives
+		LivesWhichRAM=function() return "WRAM" end,
+		maxlives=function()
+			local gametype = memory.read_u8(0x000026, "WRAM")
+			
+			if gametype == 0 then return 3 end -- compatikaiser lives
+			return 10 end, -- on foot lives
+		ActiveP1=function() return true end, -- p1 is always active!
+	},
+	['GreatBattle5_SNES']={ -- Great Battle V, The (Japan)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x00044E, "WRAM") end,
+		p1getlc=function() return memory.read_u8(0x001B01, "WRAM") end,
+		maxhp=function() return 20 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x001B01 end,
+		LivesWhichRAM=function() return "WRAM" end,
+		maxlives=function() return 10 end,
+		ActiveP1=function() return true end, -- p1 is always active!
 	},
 	['SatNightSlamMasters_SNES']={ -- Saturday Night Slam Masters, SNES - 1p (for now)
 		func=health_swap,
