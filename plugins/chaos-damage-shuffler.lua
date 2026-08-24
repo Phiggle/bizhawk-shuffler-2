@@ -127,6 +127,7 @@ plugin.description =
 
 	ADDITIONAL SUPPORTED GAMES
 	-ActRaiser (SNES), 1p
+	-Advance Wars (GBA), 1p
 	-Adventures in the Magic Kingdom (NES), 1p
 	-Adventures of the Gummi Bears (bootleg) (Genesis/Mega Drive), 1p
 	-Aero the Acro-Bat (SNES), 1p
@@ -243,6 +244,7 @@ plugin.description =
 	-Shaq-Fu (Genesis/Mega Drive), 1p
 	-Shatterhand (NES), 1p
 	-Shinobi III (Genesis/Mega Drive), 1p
+	-SimCity (SNES), 1p
 	-Simpsons: Bart vs. the World (NES), 1p
 	-Snake Rattle 'n Roll (NES), 1p
 	-Sonic Jam 6 (bootleg) (Genesis/Mega Drive), 1p
@@ -5292,6 +5294,40 @@ local gamedata = {
 		end,
 		grace=60, -- Professional/Action Mode (Nintendo Super System only???? Must verify) can combo you too rapidly to recover
 	},
+	['AdvanceWars_GBA']={ -- Advance Wars, GBA
+		func=health_swap,
+		is_valid_gamestate=function() return true end,
+		get_health=function()
+			local lost_infantry = memory.read_u8(0x01ABEC, "EWRAM")
+			local lost_mechanized = memory.read_u8(0x01ABED, "EWRAM")
+			local lost_mediumtank = memory.read_u8(0x01ABEE, "EWRAM")
+			local lost_smalltank = memory.read_u8(0x01ABF0, "EWRAM")
+			local lost_recon = memory.read_u8(0x01ABF1, "EWRAM")
+			local lost_apc = memory.read_u8(0x01ABF2, "EWRAM")
+			local lost_artillery = memory.read_u8(0x01ABF5, "EWRAM")
+			local lost_rocket = memory.read_u8(0x01ABF6, "EWRAM")
+			local lost_antiair = memory.read_u8(0x01ABF9, "EWRAM")
+			local lost_missile = memory.read_u8(0x01ABFA, "EWRAM")
+			local lost_fighter = memory.read_u8(0x01ABFB, "EWRAM")
+			local lost_bomber = memory.read_u8(0x01ABFC, "EWRAM")
+			local lost_battlecopter = memory.read_u8(0x01ABFE, "EWRAM")
+			local lost_transportcopter = memory.read_u8(0x01ABFF, "EWRAM")
+			local lost_battleship = memory.read_u8(0x01AC00, "EWRAM")
+			local lost_cruiser = memory.read_u8(0x01AC01, "EWRAM")
+			local lost_lander = memory.read_u8(0x01AC02, "EWRAM")
+			local lost_submarine = memory.read_u8(0x01AC03, "EWRAM")
+			
+			return 1000 - lost_infantry - lost_mechanized - lost_mediumtank - lost_smalltank - lost_recon - lost_apc - lost_artillery - lost_rocket - lost_antiair
+				- lost_missile - lost_fighter - lost_bomber - lost_battlecopter - lost_transportcopter - lost_battleship - lost_cruiser - lost_lander - lost_submarine end,
+		other_swaps=function() 
+			local turnplayer_changed, turnplayer_curr, turnplayer_prev = update_prev('turnplayer', memory.read_u8(0x01ABB8, "EWRAM"))
+			
+			-- human player is 3 if they're first, 0 if they're second. computer player is 1 if they're first, 2 if they're second.
+			-- shuffle when human player's turn switches to computer turn, so 3->2 or 0->1
+			return turnplayer_changed and 
+			((turnplayer_curr == 2 and turnplayer_prev == 3) or -- player is first (3), passes turn to computer who is second (2)
+			(turnplayer_curr == 1 and turnplayer_prev == 0)) end, -- player is second (0), passes turn to computer who is second (1)
+	},
 	['PaRappa1_PS1']={ -- PaRappa the Rapper, PSX
 		func=singleplayer_withlives_swap,
 		gmode=function() return memory.read_u8(0x1C3670, "MainRAM") > 0 end, -- if no points yet, no shuffle, should help avoid shuffles between rounds and give leeway at the top of a round
@@ -5957,6 +5993,25 @@ local gamedata = {
 		p1livesaddr=function() return 0x37e0 end,
 		maxlives=function() return 69 end,
 		ActiveP1=function() return true end, -- p1 is always active!
+	},
+	['SimCity_SNES']={ -- SimCity, SNES
+		func=function() return function()
+			-- population used as health; population decline treated as damage
+			local population_changed, population_curr, population_prev = update_prev('population', memory.read_u32_le(0x000BA5, "WRAM"))
+			
+			-- to reduce repeated shuffles when population is just generally trending downwards, require population to increase at least once before shuffling 
+			if prevdata["haspopulationrisen"] == nil then prevdata["haspopulationrisen"] = false end -- set a starting value of false, but do not overwrite a true value
+			
+			if population_changed then
+				if population_curr > population_prev then prevdata["haspopulationrisen"] = true -- flag population increase to prepare to shuffle
+				elseif prevdata["haspopulationrisen"] == true and population_curr < population_prev then
+					-- shuffle on population loss only when primed
+					prevdata["haspopulationrisen"] = false
+					return true end
+			end
+			
+			return false end
+		end,
 	},
 	['SimpsonsBartvsWorld_NES']={ -- The Simpsons: Bart vs. the World, NES
 		func=singleplayer_withlives_swap,
@@ -8541,6 +8596,11 @@ if type(tonumber(which_level)) == "number" then
 		if tag == "MPAINT_DPAD_SNES" and memory.read_u8(0x000206) == 1 then
 			-- give the player some Gnat Attack instructions!
 			gui.drawText(0,0,"GNAT ATTACK! Dpad moves, face buttons click, hold one/both of L/R to go fast", "green")
+		end
+		if tag == "SimCity_SNES" then
+			-- never fully run out of money
+			local money_limit = 100
+			if settings.InfiniteLives and memory.read_u32_le(0x000B9D, "WRAM") < money_limit then memory.write_s32_le(0x000B9D, money_limit, "WRAM") end
 		end
 	end
 end
