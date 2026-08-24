@@ -267,6 +267,7 @@ plugin.description =
 	-Teenage Mutant Ninja Turtles II: The Arcade Game (NES), 1-2p
 	-Teenage Mutant Ninja Turtles III: The Manhattan Project (NES), 1-2p
 	-Teenage Mutant Ninja Turtles IV: Turtles in Time (SNES), 1-2p
+	-The Guardian Legend (NES), 1p
 	-The Magical Quest Starring Mickey Mouse (SNES), 1-2p
 	-The Magical Quest 2: The Great Circus Mystery Starring Mickey & Minnie (SNES), 1-2p
 	-The Magical Quest 3: Mickey to Donald - Magical Adventure 3 (SNES), 1-2p
@@ -280,6 +281,8 @@ plugin.description =
 	-Twisted Metal 2 (PSX), 1p
 	-U.N. Squadron (SNES), 1p
 	-Ultimate Mortal Kombat 3 (SNES), 1p (for now)
+	-Valkyrie no Densetsu (Arcade), 1p
+	-Valkyrie no Densetsu (TG-16), 1p (supports Cabbage English translation)
 	-Vice: Project Doom (NES), 1p
 	-Vs. Ice Climber, set IC4-4 B-1 (Arcade), 1p
 	-WarioWare, Inc.: Mega Microgame$! (GBA), 1p - bonus games including 2p are pending
@@ -6395,6 +6398,16 @@ local gamedata = {
 		return false
 		end,
 	},
+	['GuardianLegend_NES']={ -- Guardian Legend, The
+		func=health_swap,
+		is_valid_gamestate=function() return memory.read_u8(0x0039, "RAM")==12 end,
+		get_health=function() return memory.read_s8(0x0048, "RAM") end,	
+		other_swaps=function() 
+			-- health does not change on finishing blow, need to track when game over state is reached
+			local gameover_changed, gameover_curr, gameover_prev = update_prev('gameover', memory.read_u8(0x0329, "RAM"))
+			return gameover_changed and gameover_curr == 1 end,
+		grace=20,
+	},
 	['TaleSpin_NES']={ -- TaleSpin, NES
 		func=singleplayer_withlives_swap,
 		p1gethp=function() return 
@@ -7240,6 +7253,25 @@ local gamedata = {
 		maxlives=function() return 9 end,
 		ActiveP1=function() return true end,
 		grace=40,
+	},
+	['ValkyrieDensetsu_ARC']={ -- Valkyrie no Densetsu (Japan)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x004551, "m68000 : ram : 0x100000-0x10FFFF") end,
+		p1getlc=function() return memory.read_u8(0x000021, "m68000 : ram : 0x100000-0x10FFFF") end,
+		maxhp=function() return 192 end, -- hp stored in hex, reduces in intervals of 10 (half heart)
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x000021 end,
+		LivesWhichRAM=function() return "m68000 : ram : 0x100000-0x10FFFF" end,
+		maxlives=function() return 69 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+		gmode=function() return memory.read_u8(0x004672, "m68000 : ram : 0x100000-0x10FFFF")==1 end,
+	},
+	['ValkyrieDensetsu_TG16']={ -- Valkyrie no Densetsu (J) (TurboGrafx-16)
+		func=health_swap,
+		is_valid_gamestate=function() return true end,
+		other_swaps=function() return false end,
+		get_health=function() return memory.read_u8(0x00BF, "Main Memory") end,
+		maxhp=function() return 8 end,
 	},
 	['THPS1_PS1']={ -- Tony Hawk's Pro Skater, PS1
 		func=thps_swap,
