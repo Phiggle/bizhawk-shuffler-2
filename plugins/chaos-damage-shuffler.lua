@@ -267,6 +267,8 @@ plugin.description =
 	-Teenage Mutant Ninja Turtles II: The Arcade Game (NES), 1-2p
 	-Teenage Mutant Ninja Turtles III: The Manhattan Project (NES), 1-2p
 	-Teenage Mutant Ninja Turtles IV: Turtles in Time (SNES), 1-2p
+	-The 3-D Battles of Worldrunner (NES), 1p
+	-JJ Tobidase Daisakusen Part 2 (NES), 1p
 	-The Magical Quest Starring Mickey Mouse (SNES), 1-2p
 	-The Magical Quest 2: The Great Circus Mystery Starring Mickey & Minnie (SNES), 1-2p
 	-The Magical Quest 3: Mickey to Donald - Magical Adventure 3 (SNES), 1-2p
@@ -7064,6 +7066,26 @@ local gamedata = {
 			end
 			return false
 		end,
+	},
+	['3DWorldRunner_NES']={ -- 3-D Battles of Worldrunner, The
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x00E3, "RAM") end, -- power potion: 1 when the player has extra health, 0 when they don't
+		p1getlc=function() return memory.read_u8(0x00E0, "RAM") end,
+		maxhp=function() return 1 end,
+		minhp=-1,
+		swap_exceptions=function()
+			-- power potion is lost on the frame when boss fight begins, potentially causing shuffles, so suppress shuffling for that frame
+			local is_fighting_boss_changed, is_fighting_boss_curr, is_fighting_boss_prev = update_prev('is_fighting_boss', memory.read_u8(0x0068, "RAM"))
+			if is_fighting_boss_changed and is_fighting_boss_curr == 1 and is_fighting_boss_prev == 0 then return true end
+		
+			-- player character jumping onto stage sequence; catches false positive during stage intro
+			if memory.read_u8(0x07FE, "RAM")==0 then return true end
+			return false end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x00E0 end,
+		LivesWhichRAM=function() return "RAM" end,
+		maxlives=function() return 69 end,
+		ActiveP1=function() return true end, -- p1 is always active!
 	},
 	['MagicalQuestMickey1_SNES']={ -- The Magical Quest Starring Mickey Mouse (SNES)
 		func=health_swap,

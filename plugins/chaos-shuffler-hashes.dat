@@ -208,6 +208,8 @@ CAF83E879EC362D01845A950E0DA7826         Sonic3D_SAT                  -- Sonic 3
 
 -- other supported games!
 FF66E33EFC818B516F7994F3027A72F4BC629B30 240P_NES                     -- 240p Test Suite, NES (for the stopwatch mode)
+75B6CC94A952875C936DABFBB6157F9A11C5AC49 3DWorldRunner_NES            -- 3-D Battles of Worldrunner, The
+13B9019AA9A0EA39F00B4DD4954C080A5AEF6E92 3DWorldRunner_NES            -- JJ Tobidase Daisakusen Part 2
 716244E5                                 Alundra1_PS1_JPN             -- Alundra, PSX (Japan)
 B8CB902D                                 Alundra1_PS1_1.0_USA         -- Alundra, PSX (USA), 1.0
 DEB9A9EB                                 Alundra1_PS1_1.0_USA         -- Alundra, PSX (USA), 1.0, UnWorked Designs patch
