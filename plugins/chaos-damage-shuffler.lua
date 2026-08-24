@@ -207,6 +207,7 @@ plugin.description =
 	-Mendel Palace (NES), 1p
 	-Metal Slug - Super Vehicle-001 (Arcade), 1p
 	-Metal Storm (NES), 1p
+	-Metamorphic Force (Arcade), 1p
 	-Mighty Morphin Power Rangers - The Movie (SNES), 1p
 	-Minnesota Fats - Pool Legend (Saturn), 1p story mode
 	-Ms. Pac-Man (Tengen) (NES), 1p
@@ -215,6 +216,7 @@ plugin.description =
 	-Mortal Kombat II (SNES), 1p (for now)
 	-Mystic Warriors (Arcade), 1p
 	-NBA JAM Tournament Edition (PSX), 1p - shuffles on points scored by opponent and on end of quarter
+	-Ninja Baseball Bat Man (Arcade), 1p
 	-Ninja Gaiden (NES), 1p
 	-Ninja Gaiden II - The Dark Sword of Chaos (NES), 1p
 	-Ninja Gaiden III - The Ancient Ship of Doom (NES), 1p
@@ -240,6 +242,7 @@ plugin.description =
 	-Sanrio World Smash Ball! (SNES), 1-2p
 	-Saturday Night Slam Masters (SNES), 1p
 	-SD Gundam Sangokushi Rainbow Tairiku Senki (Japan) (Arcade), 1p
+	-Shadow Force (Arcade), 1p
 	-Shaq-Fu (Genesis/Mega Drive), 1p
 	-Shatterhand (NES), 1p
 	-Shinobi III (Genesis/Mega Drive), 1p
@@ -281,6 +284,7 @@ plugin.description =
 	-U.N. Squadron (SNES), 1p
 	-Ultimate Mortal Kombat 3 (SNES), 1p (for now)
 	-Vice: Project Doom (NES), 1p
+	-Violent Storm (Arcade), 1p
 	-Vs. Ice Climber, set IC4-4 B-1 (Arcade), 1p
 	-WarioWare, Inc.: Mega Microgame$! (GBA), 1p - bonus games including 2p are pending
 	-Wild Guns (SNES), 1p
@@ -4034,6 +4038,18 @@ local gamedata = {
 		delay = 120,
 		gmode=function() return memory.read_u16_le(0x086560, "MainRAM") == 25932 end, -- This absolutely isn't the actual game mode variable, but it's consistently this value during a match, so, close enough for government work
 	},
+	['NinjaBaseballBatMan_ARC']={ -- Ninja Baseball Bat Man (World)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x0044A4, "v33 : ram : 0xE0000-0xEFFFF") end,
+		p1getlc=function() return memory.read_u8(0x004222, "v33 : ram : 0xE0000-0xEFFFF") end,
+		maxhp=function() return 100 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x0009B0 end,
+		LivesWhichRAM=function() return "v33 : ram : 0xE0000-0xEFFFF" end,
+		maxlives=function() return 69 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+		grace=35,
+	},
 	['EINHANDER_PS1']={ -- Einhänder, PS1
 		func=singleplayer_withlives_swap,
 		p1gethp = function() return 0 end,
@@ -5494,6 +5510,28 @@ local gamedata = {
 		maxlives=function() return 69 end,
 		ActiveP1=function() return true end, -- p1 is always active!
 	},
+	['MetamorphicForce_ARC']={ -- Metamorphic Force (ver EAA)
+		func=function() return function()
+				local playerstate_changed, playerstate_curr, playerstate_prev = update_prev('playerstate', memory.read_u8(0x003C04, "m68000 : ram : 0x200000-0x20FFFF"))
+				local isalive = memory.read_s16_be(0x003204, "m68000 : ram : 0x200000-0x20FFFF") > 0
+				local credits_changed, credits_curr, credits_prev = update_prev('credits', memory.read_u16_le(0x002631, "m68000 : ram : 0x200000-0x20FFFF"))
+				local gmode = memory.read_s8(0x005BA1, "m68000 : ram : 0x200000-0x20FFFF") == 17
+				
+				local damagedstate = 6 -- playerstate value upon being damaged by an enemy
+				
+				if gmode then
+					-- damaged animation flag appears on frame after damage is processed, so we need to check if the damage happened on the previous frame before we swap
+					if playerstate_changed and playerstate_curr == damagedstate and isalive then return true end
+					return credits_changed and credits_curr == credits_prev - 1 end
+				return false end
+			end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x002631 end,
+		LivesWhichRAM=function() return "m68000 : ram : 0x200000-0x20FFFF" end,
+		maxlives=function() return 69 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+		grace=35,
+	},
 	['SuperGnG_SNES']={ -- Super Ghouls'n Ghosts, SNES
 		func=singleplayer_withlives_swap,
 		p1gethp=function() return memory.read_s8(0x44A, "WRAM") end,
@@ -6762,6 +6800,22 @@ local gamedata = {
 		maxlives=function() return 5 end,
 		ActiveP1=function() return true end, -- p1 is always active!
 	},
+	['ViolentStorm_ARC']={ -- Violent Storm (ver EAC)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x0063, "m68000 : ram : 0x211000-0x21FFFF") end,
+		p1getlc=function() return memory.read_u8(0x00080C, "m68000 : ram : 0x200000-0x20FFFF") end,
+		maxhp=function() return 96 end,
+		minhp=-1, -- player is still alive at zero health
+		gmode=function() return memory.read_u8(0x000835, "m68000 : ram : 0x200000-0x20FFFF") == 1 end,
+		swap_exceptions=function() return memory.read_u8(0x0005, "m68000 : ram : 0x211000-0x21FFFF") == 19 -- megacrush animation; used so that megacrush doesn't shuffle
+			or memory.read_u8(0x004A, "m68000 : ram : 0x211000-0x21FFFF") == 0 end, -- outside of screen transition
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x0000C1 end, -- credits provided instead of lives to allow for character switching
+		LivesWhichRAM=function() return "m68000 : ram : 0x200000-0x20FFFF" end,
+		maxlives=function() return 10 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+		grace=30,
+	},
 	['MarbleMadness_NES']={ -- Marble Madness, NES
 		func=iframe_health_swap,
 		is_valid_gamestate=function() return memory.read_u8(0x0003, "RAM") == 0x02 end,
@@ -7500,6 +7554,18 @@ local gamedata = {
 			end
 		end,
 		maxhp=function() return 0 end,
+	},
+	['ShadowForce_ARC']={ -- Shadow Force (World, Version 3)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x00215F, "m68000 : ram : 0x1F0000-0x1FFFFF") end,
+		p1getlc=function() return memory.read_u8(0x002221, "m68000 : ram : 0x1F0000-0x1FFFFF") end,
+		maxhp=function() return 100 end,
+		CanHaveInfiniteLives=false, -- disabled to allow for character swapping; credits cannot be pushed
+		p1livesaddr=function() return 0x002221 end,
+		LivesWhichRAM=function() return "m68000 : ram : 0x1F0000-0x1FFFFF" end,
+		maxlives=function() return 9 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+		grace=35,
 	},
 	['ShaqFu_GEN']={ -- Shaq-Fu, Genesis
 		func=singleplayer_withlives_swap,
