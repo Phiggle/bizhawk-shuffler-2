@@ -132,6 +132,7 @@ plugin.description =
 	-Aero the Acro-Bat (SNES), 1p
 	-Aladdin (Genesis/Mega Drive), 1p
 	-Aladdin (SNES), 1p
+	-Aliens (Arcade), 1p
 	-Alundra (PSX), 1p, supports patched versions (e.g., Unworked Designs)
 	-Anticipation (NES), up to 4 players, shuffles on incorrect player answers, correct CPU answers, and running out of time.
 	-Arkanoid: Doh it Again (SNES), 1p
@@ -146,6 +147,7 @@ plugin.description =
 	-Bubsy in Fractured Furry Tales (Jaguar), 1p
 	-Bubsy 3D: Furbitten Planet (PS1), 1p
 	-Bucky O'Hare (NES), 1p
+	-Bucky O'Hare (Arcade), 1p
 	-Bugs Bunny: Birthday Blowout (NES), 1p
 	-Bugs Bunny: Crazy Castle (NES), 1p
 	-Captain Novolin (SNES), 1p
@@ -5370,6 +5372,23 @@ local gamedata = {
 		maxlives=function() return 69 end, -- true max is 99
 		ActiveP1=function() return true end, -- p1 is always active!
 	},
+	['BuckyOHare_ARC']={ -- Bucky O'Hare (ver EAB)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x000946, "m68000 : ram : 0x80000-0x8FFFF") end,
+		p1getlc=function() return memory.read_u8(0x000945, "m68000 : ram : 0x80000-0x8FFFF") end, 
+		maxhp=function() return 5 end,
+		swap_exceptions=function()
+			--overhealing rolls over into an extra life; block the specific situation where health is lost because a life was gained
+			local health_1p_changed, health_1p_curr, health_1p_prev = update_prev('health_1p', memory.read_u8(0x000946, "m68000 : ram : 0x80000-0x8FFFF"))
+			local lives_1p_changed, lives_1p_curr, lives_1p_prev = update_prev('lives_1p', memory.read_u8(0x000945, "m68000 : ram : 0x80000-0x8FFFF"))
+			return lives_1p_changed and health_1p_changed and lives_1p_curr > lives_1p_prev and health_1p_curr < health_1p_prev end,
+		gmode=function() return memory.read_u8(0x000072, "m68000 : ram : 0x80000-0x8FFFF") == 1 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x000051 end, -- unlimited credits given to allow for character switching
+		LivesWhichRAM=function() return "m68000 : ram : 0x80000-0x8FFFF" end,
+		maxlives=function() return 69 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+	},
 	['DynamiteHeaddy_GEN']={ -- Dynamite Headdy, Genesis
 		func=singleplayer_withlives_swap,
 		p1gethp=function() return memory.read_u8(0xd201, "68K RAM") end,
@@ -5683,6 +5702,18 @@ local gamedata = {
 		p1livesaddr=function() return 0x0364 end,
 		LivesWhichRAM=function() return "WRAM" end,
 		maxlives=function() return 5 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+	},
+	['Aliens_ARC']={ -- Aliens (World set 1) (Arcade)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x1502, "konami_cpu : ram : 0x400-0x1FFF") end,
+		p1getlc=function() return memory.read_u8(0x1501, "konami_cpu : ram : 0x400-0x1FFF") end,
+		maxhp=function() return 8 end,
+		gmode=function() return memory.read_u8(0x040B, "konami_cpu : ram : 0x400-0x1FFF") == 1 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x1501 end,
+		LivesWhichRAM=function() return "konami_cpu : ram : 0x400-0x1FFF" end,
+		maxlives=function() return 70 end,
 		ActiveP1=function() return true end, -- p1 is always active!
 	},
 	['LionKing_SNES']={ -- The Lion King, SNES
