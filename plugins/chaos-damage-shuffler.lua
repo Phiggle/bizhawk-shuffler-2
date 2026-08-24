@@ -173,6 +173,8 @@ plugin.description =
 	-Gimmick! (NES/Famicom), 1p
 	-Goof Troop (SNES), 1-2p
 	-Gremlins 2: The New Batch (NES), 1p
+	-Gunforce - Battle Fire Engulfed Terror Island (Arcade), 1p
+	-Gun Force II (Arcade), 1p
 	-Gunstar Heroes (Genesis/Mega Drive), 1p
 	-Hammerin' Harry (NES), 1p
 	-Hercules II (bootleg) (Genesis/Mega Drive), 1p
@@ -7539,6 +7541,29 @@ local gamedata = {
 			local balloon_changed, balloon_curr, balloon_prev = update_prev('balloon', memory.read_u8(0x050C, "RAM"))
 			return balloon_changed and balloon_curr < balloon_prev end,
     },
+	['Gunforce_ARC']={ -- Gunforce - Battle Fire Engulfed Terror Island (World) (Arcade)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return 1 end,
+		p1getlc=function() return memory.read_u8(0x0061C2, "v33 : ram : 0xE0000-0xEFFFF") end,
+		maxhp=function() return 15 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x0061C2 end,
+		LivesWhichRAM=function() return "v33 : ram : 0xE0000-0xEFFFF" end,
+		maxlives=function() return 9 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+	},
+	['Gunforce2_ARC']={ -- Gun Force II (US)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return 1 end,
+		p1getlc=function() return memory.read_u8(0x009DAC, "v33 : ram : 0xE0000-0xEFFFF") end,
+		maxhp=function() return 2 end,
+		gmode=function() return memory.read_u8(0x009E21, "v33 : ram : 0xE0000-0xEFFFF") == 255 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x009DAC end,
+		LivesWhichRAM=function() return "v33 : ram : 0xE0000-0xEFFFF" end,
+		maxlives=function() return 10 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+	},
 	['GargoylesQuest2_NES']={ -- Gargoyle's Quest II, NES, (US)
 		func=singleplayer_withlives_swap,
 		p1gethp=function() return memory.read_u8(0x0038, "RAM") end,
