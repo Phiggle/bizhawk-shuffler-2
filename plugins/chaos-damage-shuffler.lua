@@ -136,6 +136,7 @@ plugin.description =
 	-Anticipation (NES), up to 4 players, shuffles on incorrect player answers, correct CPU answers, and running out of time.
 	-Arkanoid: Doh it Again (SNES), 1p
 	-Astro Boy - Omega Factor (USA) (GBA), 1p
+	-Balloon Fight (NES), 1p
 	-Banjo-Kazooie (N64), 1p
 	-Bao Qing Tian (Ch) (NES), 1p
 	-Batman (NES), 1p
@@ -4091,6 +4092,35 @@ local gamedata = {
 		LivesWhichRAM = function() return "68K RAM" end,
 		maxlives = function() return 0x69 end,
 		ActiveP1 = function() return true end,
+	},
+	['BalloonFight_NES']={ -- Balloon Fight, NES (US)
+		func=function() return function()
+			local balloons_changed, balloons_curr, balloons_prev = update_prev('balloons', memory.read_s8(0x0088, "RAM"))
+			local lives_changed, lives_curr, lives_prev = update_prev('lives', memory.read_u8(0x0041, "RAM"))
+			local maxballoons = 2
+			local minballoons = 0
+			
+			local balloontripmode = memory.read_u8(0x0016, "RAM") == 1
+			
+			if (balloons_curr <= maxballoons and balloons_curr >= minballoons) then
+				-- shuffle when balloon is popped not life is not lost
+				if balloons_changed and balloons_curr < balloons_prev and balloons_curr > minballoons then return true end
+
+				-- shuffle when lives drop by exactly one
+				if lives_changed and lives_curr == lives_prev - 1 then return true end
+				end
+			
+			--[[ lives are not used in balloon trip mode, but lives drop to -1 in the game over display, so it's useful to determine that the player has died in this mode.
+			balloons also drop to -1 during the death animation in standard mode, including after balloons drop to 0, so this is best handled separately]]
+			if balloontripmode and balloons_changed and balloons_curr  == -1 then return true end
+			
+			return false end
+			end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x0041 end,
+		LivesWhichRAM=function() return "RAM" end,
+		maxlives=function() return 8 end,
+		ActiveP1=function() return true end, -- p1 is always active!
 	},
 	['BANJO_KAZOOIE_NA_V10_N64']={ -- Banjo-Kazooie, North America v1.0, N64
 		func=singleplayer_withlives_swap,
