@@ -139,6 +139,7 @@ plugin.description =
 	-Banjo-Kazooie (N64), 1p
 	-Bao Qing Tian (Ch) (NES), 1p
 	-Batman (NES), 1p
+	-Bionic Commando (NES), 1p
 	-Blades of Steel (NES - NA/Europe), 1-2p
 	-Bonk's Adventure (TG-16), 1p
 	-Bubble Bobble (NES), 1p
@@ -215,6 +216,7 @@ plugin.description =
 	-Mortal Kombat II (SNES), 1p (for now)
 	-Mystic Warriors (Arcade), 1p
 	-NBA JAM Tournament Edition (PSX), 1p - shuffles on points scored by opponent and on end of quarter
+	-Ninja Five-0 (GBA), 1p
 	-Ninja Gaiden (NES), 1p
 	-Ninja Gaiden II - The Dark Sword of Chaos (NES), 1p
 	-Ninja Gaiden III - The Ancient Ship of Doom (NES), 1p
@@ -4493,6 +4495,18 @@ local gamedata = {
 		ActiveP2=function() return memory.read_u8(0x1FCA, "WRAM") > 0 end,
 		maxhp=function() return 0 end,
 	},
+	['BionicCommando_NES']={ -- Bionic Commando (NES)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x0779, "RAM") end,
+		p1getlc=function() return memory.read_u8(0x004A, "RAM") end,
+		maxhp=function() return 8 end,
+		minhp=-1,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x004A end,
+		LivesWhichRAM=function() return "RAM" end,
+		maxlives=function() return 9 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+	},
 	['BladesofSteel_NES']={ -- Blades of Steel NES
 		func=twoplayers_withlives_swap,
 		gmode=function() return memory.read_u8(0x0019, "RAM") ~= 1 end, -- 1 == in demo
@@ -5321,6 +5335,12 @@ local gamedata = {
 		p1getlc=function() return 0 end, -- no lives in this game
 		maxhp=function() return memory.read_u8(0x1AE440, "MainRAM") end, -- max hp in this game ranges from 10 to 50
 		gmode=function() return memory.read_u8(0x1AE440, "MainRAM") > 0 end,  -- max hp sometimes drops to 0 in loading zones, along with hp, processing should not be done then
+	},
+	['NinjaFiveO_GBA']={ -- Ninja Five-0 (USA)
+		func=health_swap,
+		is_valid_gamestate=function() return memory.read_u8(0x2118, "IWRAM")==80 end,
+		get_health=function() return memory.read_u8(0x1F10, "IWRAM") end,
+		other_swaps=function() return false end,
 	},
 	['NinjaGaiden1_NES']={ -- Ninja Gaiden, NES
 		func=singleplayer_withlives_swap,
