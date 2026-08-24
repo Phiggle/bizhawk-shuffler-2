@@ -132,6 +132,8 @@ plugin.description =
 	-Aero the Acro-Bat (SNES), 1p
 	-Aladdin (Genesis/Mega Drive), 1p
 	-Aladdin (SNES), 1p
+	-Alex Kidd: The Lost Stars (Arcade), 1p
+	-Alex Kidd in Shinobi World (Master System), 1p
 	-Alundra (PSX), 1p, supports patched versions (e.g., Unworked Designs)
 	-Anticipation (NES), up to 4 players, shuffles on incorrect player answers, correct CPU answers, and running out of time.
 	-Arkanoid: Doh it Again (SNES), 1p
@@ -5683,6 +5685,38 @@ local gamedata = {
 		p1livesaddr=function() return 0x0364 end,
 		LivesWhichRAM=function() return "WRAM" end,
 		maxlives=function() return 5 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+	},
+	['AlexKiddLostStars_ARC']={ -- Alex Kidd: The Lost Stars (set 2, unprotected) (Arcade)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return 1 end,
+		p1getlc=function() return memory.read_u8(0x2F50, "m68000 : ram : 0xC70000-0xC73FFF") end,
+		maxhp=function() return 1 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x2F50 end,
+		LivesWhichRAM=function() return "m68000 : ram : 0xC70000-0xC73FFF" end,
+		maxlives=function() return 6 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+	},
+	['AlexKiddShinobi_SMS']={ -- Alex Kidd in Shinobi World (UE)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x022E, "Main RAM") end,
+		p1getlc=function() 
+			--(binary-coded decimal conversation taken from Bubsy Jaguar implementation)
+			-- Need to convert binary-coded decimal hexadecimal value to just plain decimal
+			local livesHex = memory.read_u8(0x022F, "Main RAM")
+			-- Get upper nybble, bit-shift right 4 bits
+			local tens = (livesHex & 0xF0)>>4
+			-- Just the lower nybble
+			local ones = livesHex & 0x0F
+			-- Merge 'em
+			local lives = (tens * 10) + ones
+			return lives end,
+		maxhp=function() return 6 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x022F end,
+		LivesWhichRAM=function() return "Main RAM" end,
+		maxlives=function() return 0x69 end,
 		ActiveP1=function() return true end, -- p1 is always active!
 	},
 	['LionKing_SNES']={ -- The Lion King, SNES
