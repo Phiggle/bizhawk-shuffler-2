@@ -219,6 +219,9 @@ plugin.description =
 	-Ninja Gaiden II - The Dark Sword of Chaos (NES), 1p
 	-Ninja Gaiden III - The Ancient Ship of Doom (NES), 1p
 	-Ninjawarriors (SNES), 1p
+	-Pac-Land (Arcade), 1p
+	-Pac-Land (TG-16), 1p
+	-Pac-Man Championship Edition (NES), 1p
 	-PaRappa the Rapper (PSX), 1p - shuffles on dropping a rank
 	-Pebble Beach Golf Links (Sega Saturn), 1p - Tournament Mode, shuffles after stroke
 	-Pepsiman (PSX), 1p
@@ -5291,6 +5294,46 @@ local gamedata = {
 			return gameMode >= 1 and gameMode <= 8 -- p1 is always active, but don't set lives when in sim mode
 		end,
 		grace=60, -- Professional/Action Mode (Nintendo Super System only???? Must verify) can combo you too rapidly to recover
+	},
+	['PacLand_ARC']={ -- Pac-Land (World)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return 1 end,
+		p1getlc=function() return memory.read_u8(0x0100, "mc6809e : ram : 0x2000-0x37FF") end,
+		maxhp=function() return 1 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x0100 end,
+		LivesWhichRAM=function() return "mc6809e : ram : 0x2000-0x37FF" end,
+		maxlives=function() return 9 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+	},
+	['PacLand_TG16']={ -- Pac-Land (U) (TurboGrafx-16)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return 1 end,
+		p1getlc=function() return memory.read_u8(0x0167, "Main Memory") end,
+		maxhp=function() return 1 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x0167 end,
+		LivesWhichRAM=function() return "Main Memory" end,
+		maxlives=function() return 70 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+	},
+	['PacManChampionship_NES']={ -- Pac-Man Championship Edition, NES
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return 1 end,
+		p1getlc=function() return (10 * memory.read_u8(0x0451, "RAM")) + memory.read_u8(0x0450, "RAM") end, -- both digits for lives are stored separately
+		maxhp=function() return 1 end,
+		gmode=function() return memory.read_u8(0x043F, "RAM")==1 end,
+		other_swaps=function()
+			-- player's lives do not drop again when hit while at 0 lives, so damage on last life needs to be accounted for
+			local death_animation_changed, death_animation_cur, death_animation_prev = update_prev('death_animation', memory.read_u8(0x0057, "RAM"))
+			return death_animation_changed
+				and death_animation_cur == 7
+				and ((10 * memory.read_u8(0x0451, "RAM")) + memory.read_u8(0x0450, "RAM")) == 0 end,
+		CanHaveInfiniteLives=false, -- since the win condition is just surviving the timer, player no longer needs to actually do anything to succeed if they can't die
+		p1livesaddr=function() return 0x0450 end, -- address is for only unit digit; tens digit is stored at 0x0451
+		LivesWhichRAM=function() return "RAM" end,
+		maxlives=function() return 9 end, -- since only one digit is used, max is 9. max with both digits would be 99
+		ActiveP1=function() return true end, -- p1 is always active!		
 	},
 	['PaRappa1_PS1']={ -- PaRappa the Rapper, PSX
 		func=singleplayer_withlives_swap,
