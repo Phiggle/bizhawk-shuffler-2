@@ -218,6 +218,8 @@ plugin.description =
 	-Ninja Gaiden (NES), 1p
 	-Ninja Gaiden II - The Dark Sword of Chaos (NES), 1p
 	-Ninja Gaiden III - The Ancient Ship of Doom (NES), 1p
+	-Ninja Gaiden Shadow (GB), 1p
+	-Ninja Spirit (TG-16), 1p
 	-Ninjawarriors (SNES), 1p
 	-PaRappa the Rapper (PSX), 1p - shuffles on dropping a rank
 	-Pebble Beach Golf Links (Sega Saturn), 1p - Tournament Mode, shuffles after stroke
@@ -5358,6 +5360,29 @@ local gamedata = {
 		ActiveP1=function() return true end, -- p1 is always active!
 		grace=100, -- approx 60 frames from knockback/iframes until vulnerable again
 	},
+	['NinjaGaidenShadow_GB']={ -- Ninja Gaiden Shadow (USA)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x009B, "WRAM") end, 
+		p1getlc=function() return memory.read_u8(0x009C, "WRAM") end,
+		maxhp=function() return 6 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x009C end,
+		LivesWhichRAM=function() return "WRAM" end,
+		maxlives=function() return 9 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+	},
+	['NinjaSpirit_TG16']={ -- Ninja Spirit (U)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x17C9, "Main Memory") end,
+		p1getlc=function() return memory.read_u8(0x0B68, "Main Memory") end, 
+		maxhp=function() return 5 end,
+		gmode=function() return memory.read_u8(0x0B6B, "Main Memory")==1 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x0B68 end,
+		LivesWhichRAM=function() return "Main Memory" end,
+		maxlives=function() return 9 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+	},	
 	['BuckyOHare_NES']={ -- Bucky O'Hare, NES
 		func=singleplayer_withlives_swap,
 		p1gethp=function() return memory.read_u8(0x05A0, "RAM") end,
