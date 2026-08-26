@@ -7988,6 +7988,27 @@ local gamedata = {
 		-- alternatively, use 2, for max first aid kits
 		ActiveP1=function() return true end, -- p1 is always active!
 	},
+	['Breakout_PSX']={ -- Breakout, PSX
+		func=health_swap,
+		-- Using in game "lives" as hp
+		get_health=function() return mainmemory.read_u8(0x1F4520) end,
+		is_valid_gamestate=function()
+			-- post-death pause screen has a demo mode that likes to eat lives.
+			if mainmemory.read_u8(0x1081B4) == 80 then return false
+			else return true end
+		end,
+		-- Grace mostly so the dragon doesn't make a billion swaps.
+		grace=30;
+		other_swaps=function()
+			-- explosion hits slow the player, setting this timer
+			local slow_timer_changed, slow_timer_curr, slow_timer_prev = update_prev("slow_timer", mainmemory.read_u8(0x1F45C0))
+			if slow_timer_changed and slow_timer_curr > slow_timer_prev then return true end
+			-- 10 is rotten egg slow, 11 is crushed by a knight
+			local player_state_changed, player_state_curr = update_prev("player_state", mainmemory.read_u8(0x1F4678))
+			if player_state_changed and (player_state_curr == 10 or player_state_curr == 11) then return true end
+			return false
+		end,
+	},
 }
 
 local backupchecks = {
