@@ -17,10 +17,11 @@ plugin.description =
 	Supports:
 	- Mega Man 1-6 NES
 	- Mega Man 7 SNES
-	- Mega Man 8 PSX
+	- Mega Man 8 PSX & Saturn
 	- Mega Man X 1-3 SNES
 	- Mega Man X3 PSX (PAL & NTSC-J)
 	- Mega Man X 4-6 PSX
+	- Mega Man X4 Saturn (NTSC-U)
 	- Mega Man Xtreme 1 & 2 GBC
 	- Rockman & Forte SNES
 	- Mega Man I-V GB
@@ -274,6 +275,15 @@ local gamedata = {
 		getlc=function() return memory.read_u8(0x1C3370, "MainRAM") end,
 		maxhp=function() return 40 end,
 	},
+	['mm8sat-us']={ -- Mega Man 8 Saturn
+		gethp=function() return memory.read_u8(0x02FFDF, "Work Ram High") end,
+		getlc=function() return memory.read_u8(0x02DA88, "Work Ram High") end,
+		maxhp=function() return 40 end,
+		swap_exceptions=function()
+			local ingame_check = memory.read_u8(0x2DA5A, "Work Ram High")
+			return (ingame_check ~= 0x3 and ingame_check ~= 0x4)
+		end,
+	},
 	['mmwwgen']={ -- Mega Man Wily Wars GEN
 		gethp=function() return memory.read_u8(0xA3FE, "68K RAM") end,
 		getlc=function() return memory.read_u8(0xCB39, "68K RAM") end,
@@ -339,6 +349,15 @@ local gamedata = {
 			-- this address goes alongside the addresses that hold checkpoint and level
 			-- 0 in active gameplay, 1 when loading/in cutscene
 			return hp_changed and hp_curr == 0 and cutscene_curr == 1
+		end,
+	},
+	['mmx4sat-us']={ -- Mega Man X4 PSX
+		gethp=function() return bit.band(memory.read_u8(0x054988, "Work Ram High"), 0x7F) end,
+		getlc=function() return memory.read_s8(0x05490C, "Work Ram High") end,
+		maxhp=function() return memory.read_u8(0x05490E, "Work Ram High") end,
+		swap_exceptions=function()
+			local ingame_check = memory.read_u8(0x548C8, "Work Ram High")
+			return (ingame_check ~= 0x05 and ingame_check ~= 0x06)
 		end,
 	},
 	['mmx5psx-us']={ -- Mega Man X5 PSX
