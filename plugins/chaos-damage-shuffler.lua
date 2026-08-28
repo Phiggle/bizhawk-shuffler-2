@@ -8078,6 +8078,36 @@ local gamedata = {
 		-- alternatively, use 2, for max first aid kits
 		ActiveP1=function() return true end, -- p1 is always active!
 	},
+	['MuppetRaceMania_PSX']={ -- Muppet RaceMania, PSX
+		func=health_swap,
+		is_valid_gamestate=function() 
+			local game_state = memory.read_u8(0x0B0D46, "MainRAM")
+			local curr_map = memory.read_u8(0x0B0FAC, "MainRAM")
+			local demo = memory.read_u8(0x0B0BD2, "MainRAM")
+			-- If we're in a demo, don't.
+			if (demo ~= 0) then return false end
+			-- 01 is in a Race, 02 is in a Battle. Don't really wanna swap anywhere else.
+			if (game_state ~= 0x01 and game_state ~= 0x02) then return false end
+			-- Slightly paranoid; there are a bunch of tracks that the player shouldn't be racing on, but the title screen has the possibility of doing something funky.
+			if (curr_map == 0x1E) then return false end
+			return true
+		end,
+		-- At some point I will implement "swap when number go up" and today will not be that day
+		get_health=function()
+			local game_state = memory.read_u8(0x0B0D46, "MainRAM")
+			-- Races track the number of times you've been hit.
+			if (game_state == 0x01) then return (0 - memory.read_u8(0x0C353C, "MainRAM")) end
+			-- In a seperate value, Battles track how much damage you've taken.
+			if (game_state == 0x02) then return (0 - memory.read_u16_le(0x0C34E8, "MainRAM")) end
+			-- Outside of these times, return an exceptionally silly value to avoid shuffling when we get good values
+			return -999999
+		end,
+		ActiveP1=function() return true end,
+		other_swaps=function() return false end,
+		-- Unsure about grace and delay. Want some delay just so its obvious when you've been hit with a special move.
+		grace=60,
+		delay=15,
+	},
 }
 
 local backupchecks = {
