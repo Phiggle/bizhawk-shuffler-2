@@ -193,6 +193,7 @@ plugin.description =
 	-Kabuki Quantum Fighter (NES), 1p
 	-Kuru Kuru Kururin (GBA), 1p
 	-Last Alert (TG-16 CD), 1p
+	-The Legendary Axe (TG-16), 1p
 	-Little Samson (NES), 1p
 	-Lion King, The (NES), 1p
 	-Lion King, The (bootleg) (NES), 1p
@@ -4112,6 +4113,18 @@ local gamedata = {
 				return 1
 			end
 		end,
+	},
+	['LegendaryAxe_TG16']={ -- The Legendary Axe (U)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u16_le(0x0092, "Main Memory") end,
+		p1getlc=function() return memory.read_s8(0x0009, "Main Memory") end,
+		maxhp=function() return 0x1000 end,
+		gmode=function() return memory.read_u8(0x0FC5, "Main Memory")==63 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x0009 end,
+		LivesWhichRAM=function() return "Main Memory" end,
+		maxlives=function() return 9 end,
+		ActiveP1=function() return true end, -- p1 is always active!
 	},
 	['PEBBLE_BEACH_GOLF_LINKS_SAT']={ -- Pebble Beach Golf Links, Sega Saturn
 		func=Pebble_Beach_Golf_Links_swap,
