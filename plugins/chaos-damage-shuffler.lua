@@ -144,6 +144,7 @@ plugin.description =
 	-Anticipation (NES), up to 4 players, shuffles on incorrect player answers, correct CPU answers, and running out of time.
 	-Arkanoid: Doh it Again (SNES), 1p
 	-Astro Boy - Omega Factor (USA) (GBA), 1p
+	-Avenging Spirit (Arcade), 1p
 	-Banjo-Kazooie (N64), 1p
 	-Bao Qing Tian (Ch) (NES), 1p
 	-Batman (NES), 1p
@@ -8137,6 +8138,44 @@ local gamedata = {
 		is_valid_gamestate=function() return true end,
 		get_health=function() return memory.read_u16_le(0x2802, "IWRAM") end,
 		other_swaps=function() return false end,
+	},
+	['AvengingSpirit_ARC']={ -- Avenging Spirit (Arcade)
+		func=function() return function()
+			--[[ Avenging Spirit uses a dual health bar system. You are put on the continue screen if your main health, referred to here as ghost health, is emptied. Your ghost
+			health drains not just with damage, but also continually drains when you do not have an enemy possessed. When you possess an enemy, damage also takes away from
+			your secondary health, or possession health, but running out simply returns you to raw ghost form.
+			
+			To prevent constant shuffling while an enemy is not possessed, shuffling based on possession health is preferred over ghost health. However, possession is infinite
+			during boss battles and accordingly possession health is gibberish during this period, so ghost health must be used. ]]
+			local ghosthealth_changed, ghosthealth_curr, ghosthealth_prev = update_prev('ghosthealth', memory.read_u8(0x019E55, "m68000 : ram : 0x60000-0x7FFFF"))
+			local possessionhealth_changed, possessionhealth_curr, possessionhealth_prev = update_prev('possessionhealth', memory.read_s8(0x019F51, "m68000 : ram : 0x60000-0x7FFFF"))
+		
+			local coins_changed, coins_curr, coins_prev = update_prev('coins', memory.read_u8(0x018F8B, "m68000 : ram : 0x60000-0x7FFFF"))
+		
+			local currentstage = memory.read_u8(0x019585, "m68000 : ram : 0x60000-0x7FFFF")
+			
+			local gmode = memory.read_u8(0x019603, "m68000 : ram : 0x60000-0x7FFFF") == 29
+			
+			if gmode then
+				-- process shuffling for health loss first
+			
+				if currentstage == 1 or currentstage == 3 or currentstage == 5 or currentstage == 8 or currentstage == 25 or currentstage == 29 then -- detect boss stage
+				-- only ghost health is actually used in boss fights
+				-- avoid shuffle on death since that'll be handled by coins
+					if ghosthealth_changed and ghosthealth_curr > 0 and ghosthealth_curr < ghosthealth_prev then return true end
+				else
+					-- possession health used for regular stages since ghost death drains while in ghost form
+					if possessionhealth_changed and possessionhealth_curr < possessionhealth_prev 
+						and (ghosthealth_curr > 0 or possessionhealth_curr > 0) then -- shuffling on possession death is generally fine since it's distinct from ghost health, but avoid double shuffling when it would overlap
+						return true end
+				end
+				
+				-- shuffle is coin is used to continue
+				return coins_changed and coins_curr == (coins_prev - 1)
+			end
+			
+			return false end
+		end,
 	},
 	['JurassicPark1_SNES']={ -- Jurassic Park, SNES (USA)
 		func=singleplayer_withlives_swap,
