@@ -156,6 +156,7 @@ plugin.description =
 	-Bucky O'Hare (NES), 1p
 	-Bugs Bunny: Birthday Blowout (NES), 1p
 	-Bugs Bunny: Crazy Castle (NES), 1p
+	-Cabal (NES), 1p
 	-Captain Novolin (SNES), 1p
 	-Chip and Dale Rescue Rangers 1 (NES), 1-2p
 	-Chip and Dale Rescue Rangers 2 (NES), 1-2p
@@ -284,6 +285,7 @@ plugin.description =
 	-Tony Hawk's Pro Skater 2 (PSX), 1p
 	-Tony Hawk's Pro Skater 3 (PSX), 1p
 	-Tony Hawk's Pro Skater 4 (PSX), 1p
+	-Tsumi to Batsu - Hoshi no Keishousha / Sin and Punishment (N64), 1p
 	-Twisted Metal 2 (PSX), 1p
 	-U.N. Squadron (SNES), 1p
 	-Ultimate Mortal Kombat 3 (SNES), 1p (for now)
@@ -2516,6 +2518,17 @@ local gamedata = {
 		gmode=function() return (memory.read_u8(0x0070, "RAM")%2) == 0 end,
 		-- several potential values, but if it's ever odd, we're not in-game.
 		maxhp=function() return 60 end,
+	},
+	['Cabal_NES']={ -- Cabal, NES
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return 1 end,
+		p1getlc=function() return memory.read_u8(0x00D4, "RAM") - 242 end, -- lives, starts counting with 242 being zero
+		maxhp=function() return 9 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x00D4 end, -- continues respawn the player wherever they died like lives, so giving the player unlimited lives is less cumbersome
+		LivesWhichRAM=function() return "RAM" end,
+		maxlives=function() return 9 + 242 end,
+		ActiveP1=function() return true end, -- p1 is always active!
 	},
 	['CaptainNovolin']={ -- Captain Novolin SNES
 		func=singleplayer_withlives_swap,
@@ -7438,6 +7451,24 @@ local gamedata = {
 		maxlives=function() return 10 end, -- one more than displayed
 		ActiveP1=function() return mainmemory.read_u8(0x400) > 0 end,
 		ActiveP2=function() return mainmemory.read_u8(0x500) > 0 end,
+	},
+	['SinAndPunishment_N64']={ -- Tsumi to Batsu - Hoshi no Keishousha / Sin and Punishment (N64)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x0D5A9B, "RDRAM") end,
+		p1getlc=function() return memory.read_u8(0x0D5C0F, "RDRAM") end,
+		maxhp=function() return 100 end,
+		minhp=-1,
+		grace=15,
+		swap_exceptions=function() -- player takes 1 damage every second when time is zero, only swap for larger damage when time over
+			local health_changed, health_curr, health_prev = update_prev('health', memory.read_u8(0x0D5A9B, "RDRAM"))
+			local timer_curr = memory.read_u8(0x0D5A97, "RDRAM")
+			return health_changed and timer_curr == 0 and health_curr == (health_prev - 1) end,
+		gmode=function() return memory.read_u8(0x075C13, "RDRAM") == 100 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x0D5C0F end,
+		LivesWhichRAM=function() return "RDRAM" end,
+		maxlives=function() return 69 end,
+		ActiveP1=function() return memory.read_u8(0x075C13, "RDRAM") == 100 end, -- to prevent the game from freezing during startup
 	},
 	['TwistedMetal2_PSX']={ -- Twisted Metal 2, PSX
 		func=singleplayer_withlives_swap,
