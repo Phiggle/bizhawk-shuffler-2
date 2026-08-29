@@ -257,6 +257,7 @@ plugin.description =
 	-StarTropics (NES), 1p
 	-Street Fighter 2010: The Final Fight (NES), 1p
 	-Streets of Rage II (Genesis/Mega Drive), 1-2p (includes duel mode)
+	-Star Fox (SNES), 1p (30 fps patch v2.0 supported)
 	-Star Fox 64 (N64), 1p-4p
 	-Sunset Riders (SNES, Genesis, Arcade), 1p
 	-Super Aladdin (bootleg) (NES), 1p
@@ -5292,6 +5293,48 @@ local gamedata = {
 		ActiveP1=function() return memory.read_u8(0x0031, "RAM") > 0 end,
 		ActiveP2=function() return memory.read_u8(0x0032, "RAM") > 0 end,
 		maxhp=function() return 0 end,
+	},
+	['StarFox_SNES']={ -- Star Fox (USA) (Rev 2)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x000396, "WRAM") end,
+		p1getlc=function() return memory.read_u8(0x0016EC, "WRAM") end,
+		maxhp=function() return 40 end,
+		other_swaps=function() 
+			-- Wing health is separate from normal health, so shuffling for wing damage would need to be checked separately
+			local left_wing_health_changed, left_wing_health_curr, left_wing_health_prev = update_prev('left_wing_health', memory.read_u8(0x0003CC, "WRAM"))
+			local right_wing_health_changed, right_wing_health_curr, right_wing_health_prev = update_prev('right_wing_health', memory.read_u8(0x000402, "WRAM"))
+			
+			-- A wing breaks when its health hits zero, then it almost immediately drops again to -1. To avoid double shuffling, we'll ignore any changes which end up at -1
+			if left_wing_health_curr >= 0 and left_wing_health_changed and left_wing_health_curr < left_wing_health_prev then return true end
+			if right_wing_health_curr >= 0 and right_wing_health_changed and right_wing_health_curr < left_wing_health_prev then return true end
+			return false end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x0016EC end,
+		LivesWhichRAM=function() return "WRAM" end,
+		maxlives=function() return 10 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+		grace=20,
+	},
+	['StarFox_30fps_SNES']={ -- Star Fox (USA) (Rev 2) (30 fps fix v2.0)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x000396, "WRAM") end,
+		p1getlc=function() return memory.read_u8(0x0016F0, "WRAM") end, -- differs from base game
+		maxhp=function() return 40 end,
+		other_swaps=function() 
+			-- Wing health is separate from normal health, so shuffling for wing damage would need to be checked separately
+			local left_wing_health_changed, left_wing_health_curr, left_wing_health_prev = update_prev('left_wing_health', memory.read_u8(0x0003CC, "WRAM"))
+			local right_wing_health_changed, right_wing_health_curr, right_wing_health_prev = update_prev('right_wing_health', memory.read_u8(0x000402, "WRAM"))
+			
+			-- A wing breaks when its health hits zero, then it almost immediately drops again to -1. To avoid double shuffling, we'll ignore any changes which end up at -1
+			if left_wing_health_curr >= 0 and left_wing_health_changed and left_wing_health_curr < left_wing_health_prev then return true end
+			if right_wing_health_curr >= 0 and right_wing_health_changed and right_wing_health_curr < left_wing_health_prev then return true end
+			return false end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x0016F0 end,
+		LivesWhichRAM=function() return "WRAM" end,
+		maxlives=function() return 10 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+		grace=20,
 	},
 	['StarFox64_N64']={ -- Star Fox 64 (N64)
 		func=damage_buffer_swap,
