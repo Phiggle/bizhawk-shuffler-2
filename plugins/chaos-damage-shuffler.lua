@@ -53,7 +53,15 @@ plugin.description =
 	-Super Mario Land (GB or GBC DX patch), 1p
 	-Super Mario Land 2: 6 Golden Coins (GB or GBC DX patch), 1p
 	-Super Mario 64 (N64), 1p - including Better Non-Stop hack
+	-Super Mario Advance 4 (GBA Virtual Console), 1p
 	-New Super Mario Bros. (DS), 1p
+
+	F-ZERO BLOCK
+	-F-Zero (SNES), 1p
+	-F-Zero: Maximum Velocity (GBA), 1p
+	-F-Zero: GP Legend (GBA), 1p
+	-F-Zero: Climax (GBA), 1p
+	-F-Zero X (N64), 1p
 
 	CASTLEVANIA BLOCK
 	-Castlevania (NES), 1p
@@ -113,6 +121,7 @@ plugin.description =
 	-Kirby: Super Star (SNES), 1p
 	-Kirby: Nightmare in Dream Land (GBA), 1p
 	-Kirby and the Amazing Mirror (GBA), 1p
+	-Kirby 64: The Crystal Shards (N64), 1p
 	
 	SONIC BLOCK
 	-Sonic the Hedgehog (Genesis/Mega Drive), 1p
@@ -150,6 +159,8 @@ plugin.description =
 	-Bugs Bunny: Birthday Blowout (NES), 1p
 	-Bugs Bunny: Crazy Castle (NES), 1p
 	-Captain Novolin (SNES), 1p
+	-Celeste [Pico-8] (homebrew port) (GBA), 1p
+	-Celeste 2 [Pico-8] (homebrew port) (GBA), 1p
 	-Chip and Dale Rescue Rangers 1 (NES), 1-2p
 	-Chip and Dale Rescue Rangers 2 (NES), 1-2p
 	-Crash Bandicoot 1-3 (PSX), 1p, US version
@@ -165,13 +176,13 @@ plugin.description =
 	-Dynamite Headdy (Genesis/Mega Drive), 1p
 	-Earnest Evans, Mega CD
 	-Einhänder (PSX), 1p
-	-F-Zero (SNES), 1p
 	-Family Feud (SNES), 1-2p
 	-Garfield: A Week of Garfield (NES), 1p
 	-Gargoyle's Quest II (NES), 1p
 	-Ghosts'n Goblins (NES), 1p
 	-Ghouls'n Ghosts (Genesis/Mega Drive), 1p
 	-Gimmick! (NES/Famicom), 1p
+	-Goldeneye: 007 (N64), 1p
 	-Goof Troop (SNES), 1-2p
 	-Gremlins 2: The New Batch (NES), 1p
 	-Gunstar Heroes (Genesis/Mega Drive), 1p
@@ -192,6 +203,7 @@ plugin.description =
 	-Jurassic Park (SNES), 1p
 	-Kabuki Quantum Fighter (NES), 1p
 	-Kuru Kuru Kururin (GBA), 1p
+	-Kururin Paradise (GBA), 1p
 	-Last Alert (TG-16 CD), 1p
 	-Little Samson (NES), 1p
 	-Lion King, The (NES), 1p
@@ -202,6 +214,7 @@ plugin.description =
 	-Majuu Ou (Japan) / King of Demons (SNES), 1p
 	-Marble Madness (NES), 1-2p
 	-Mario Kart: Super Circuit (SNES), 1p, Grand Prix - shuffles on collisions with other karts (lost coins or have 0 coins), falls
+	-Mario Kart (DS), 1p
 	-Mario Paint (SNES), joystick hack, Gnat Attack, 1p
 	-Math Blaster - Episode 1 (SNES), 1p
 	-Mega Q*Bert (Genesis/Mega Drive), 1p
@@ -240,6 +253,7 @@ plugin.description =
 	-Rubble Saver II (GB), 1p
 	-Sanrio World Smash Ball! (SNES), 1-2p
 	-Saturday Night Slam Masters (SNES), 1p
+	-Scurge: Hive (GBA, DS), 1p
 	-SD Gundam Sangokushi Rainbow Tairiku Senki (Japan) (Arcade), 1p
 	-Shaq-Fu (Genesis/Mega Drive), 1p
 	-Shatterhand (NES), 1p
@@ -260,6 +274,7 @@ plugin.description =
 	-Super Mario Kart (SNES), 1-2p - shuffles on collisions with other karts (lost coins or have 0 coins), falls
 	-Sonic Mario Bros., Squirrel King mechanics (bootleg) (Genesis/Mega Drive), 1p
 	-Super Monkey Ball Jr. (GBA), 1p
+	-Super Monkey Ball: Touch & Roll (DS), 1p
 	-Super Smash TV (SNES), 1p
 	-TaleSpin (NES), 1p
 	-Tarzan: Lord of the Jungle (unreleased) (SNES), 1p
@@ -283,7 +298,9 @@ plugin.description =
 	-Ultimate Mortal Kombat 3 (SNES), 1p (for now)
 	-Vice: Project Doom (NES), 1p
 	-Vs. Ice Climber, set IC4-4 B-1 (Arcade), 1p
+	-Wario Land 4 (GBA), 1p
 	-WarioWare, Inc.: Mega Microgame$! (GBA), 1p - bonus games including 2p are pending
+	-WarioWare: Twisted! (GBA), 1p
 	-Wild Guns (SNES), 1p
 	-Windjammers / Flying Power Disc (Arcade), 1p
 	-Wit's (NES), 1p
@@ -1162,31 +1179,48 @@ local function smk_swap(gamemeta)
 end
 
 local function fzero_snes_swap(gamemeta)
-	-- alternative option for F-Zero swapping, currently testing this out
-	-- 0x00F5 is "collided with a wall", pops up to 9 then drops by 1 every frame back down to 0.
-	-- We don't want a swap on just being "in" the wall or grazing it, necessarily.
-	-- 0x00E9 is "hitting a guardrail" and is separate from colliding with the wall.
-	-- So, you can say "no swaps" on hitting a guardrail == true when colliding with wall == false.
-	-- can experiment with "invuln frames just popped from 0" AND either wall bump or other bump?
-	return function()
-		if 	memory.read_u8(0x0054, "WRAM") == 2 -- gamestate = "racing," and
-			and memory.read_u8(0x0055, "WRAM") == 3 -- the race has started, and
-			and memory.read_u8(0x00C8, "WRAM") == 0 -- invulnerability frames are done (0)
-		then
-			return false -- don't swap when all of those are true	
+	-- goals for this function:
+	-- identify triggers for starting a swap countdown
+	-- extend the countdown to a swap IF hp goes down at any point (trigger condition or not)
+	return function(data)
+		-- if we are not in an active gamestate, or back at max hp, 
+		-- do not swap AND cancel any pending swaps
+		if gamemeta.getgamestate() == false then
+			data.delayCountdown = nil
+			return false
 		end
 		
-		local hitwall_changed, hittingwall, prev_hittingwall = update_prev('hittingwall', gamemeta.gethittingwall())
-		-- when this variable pops up from 0, you're hitting a wall.
-		local invuln_changed, invuln, prev_invuln = update_prev('invuln', gamemeta.getinvuln())
-		-- this pops up from 0 if you get i-frames, only goes up slightly for being in a wall
-		local bump_changed, bump, prev_bump = update_prev('bump', gamemeta.getbump())
-		-- this variable pops up if you are bounced by another car, a mine, etc.
-
-		return
-			(hitwall_changed and prev_hittingwall == 0) or
-			(invuln_changed and invuln > prev_invuln and invuln >6) or
-			(bump_changed and prev_bump == 0)
+		local currhp = gamemeta.gethp()
+		-- retrieve previous health before backup
+		local prevhp = data.prevhp
+		-- backup
+		data.prevhp = currhp
+		
+		-- If a swap is already scheduled:
+		-- check if hp has dropped again
+		-- if so, reload the delay timer
+		-- if not, tick down the delay timer
+		if data.delayCountdown ~= nil and data.delayCountdown > 0 then
+			if currhp < prevhp then 
+				data.delayCountdown = gamemeta.delay or 30
+			else
+			data.delayCountdown = data.delayCountdown - 1
+			end
+			if data.delayCountdown == 0 then
+				return true
+			end
+			return false
+		end
+		-- determine whether a swap should be cued based on designated triggers
+		-- rather than hp loss alone
+		if gamemeta.getlost() == true or -- took a death or lost
+			prevhp ~= nil and currhp < prevhp and
+			(gamemeta.getbumpedcar() == true or -- bumped a car
+			gamemeta.getbumpedrail() == true or
+			gamemeta.getblasted() == true)
+		then
+			data.delayCountdown = gamemeta.delay or 30
+		end
 	end
 end
 
@@ -3207,6 +3241,60 @@ local gamedata = {
 		maxlives=function() return 69 end,
 		ActiveP1=function() return memory.read_u8(0x33B193, "RDRAM") > 0 end,
 	},
+	['SMA4_VC'] = { -- Super Mario Advance 4 (Virtual Console)
+		func = singleplayer_withlives_swap,
+		p1gethp = function()
+			if memory.read_u8(0x3BB0, "IWRAM") == 1 then
+				return 0 -- maybe a death, wait for lives
+			elseif memory.read_u8(0x2D77, "IWRAM") == 0 then
+				return math.min(memory.read_u8(0x2CE2, "IWRAM"), 2) + 1 -- mario
+			else
+				return math.min(memory.read_u8(0x2CE3, "IWRAM"), 2) + 1 -- luigi
+			end
+		end,
+		p1getlc = function()
+			if memory.read_u8(0x385E, "IWRAM") == 3 then
+				-- e-reader mode lives (shared 1p/2p)
+				return memory.read_s16_le(0x3A48, "IWRAM")
+			else
+				-- 1p + 2p lives, allows for life trading
+				return memory.read_s16_le(0x2A6A, "IWRAM") + memory.read_s16_le(0x2A6C, "IWRAM")
+			end
+		end,
+		maxhp = function() return 3 end,
+		-- only swap for changes during a level
+		swap_exceptions = function() return memory.read_u8(0x376C, "IWRAM") ~= 2 end,
+		-- Infinite* Lives section
+		CanHaveInfiniteLives = true,
+		p1livesaddr = function()
+			if memory.read_u8(0x385E, "IWRAM") == 3 then
+				return 0x3A48
+			elseif memory.read_u8(0x2D77, "IWRAM") == 0 then
+				return 0x2A6A else return 0x2A6C
+			end
+		end,
+		LivesWhichRAM = function() return "IWRAM" end,
+		maxlives = function() return 68 end, -- 1 byte here, so no 420
+		ActiveP1 = function()
+			local state = memory.read_u8(0x376C, "IWRAM")
+			-- lives can be set on map screens as well
+			return state == 1 or state == 2 or state == 10
+		end,
+		-- OTHER NOTES:
+		-- you can have 999 lives in this one for some reason
+		-- 0x376C IWRAM is the overall game state: (for SMB3: 0 title, 1 map, 2 level, 3 bonus)
+		-- 0x385E IWRAM is the SMB3 mode: 0 on title, 1 1p, 2 2p, 3 e-reader
+		--   e-reader mode has its own lives counter
+		-- 0x3BB0 IWRAM is 1 during deaths/end-of-level/mushroom houses
+		--   used to avoid double-swapping on death w/ status > 0
+		-- 0x2C[2E-51] IWRAM is the 1p inventory (36 items), values 1-15 (2p @ 2C[59-7C])
+		-- 0x2CE2/0x2CE3 IWRAM is mario/luigi status: goes (2+) -> 1 -> 0 on hit
+		-- 0x2D77 IWRAM is which character: 0 for mario, 1 for luigi
+		-- 0x2A40 IWRAM is 1 during loading, 0 otherwise
+		-- some game data is stored in a non-fixed location in memory via pointers
+		--   0x7818 and 0x7820 IWRAM appear to hold the start/end pointers for this
+		--   if needed, the actual death status is at +0x62 here: 1 enemy, 2 fall
+	},
 	['NSMB_DS'] = { -- New Super Mario Bros (DS)
 		func = mario_swap,
 		get_lives = function() return memory.read_u8(0x08B364, "Main RAM") end,
@@ -3244,36 +3332,253 @@ local gamedata = {
 		-- requiring the 0x03BD34 value of 3 filters this nonsense thankfully
 	},
 	['FZERO_SNES']={ -- F-ZERO, SNES
-		func=singleplayer_withlives_swap,
-		p1gethp=function() return memory.read_s16_le(0x00C9, "WRAM") end,
-		p1getlc=function() return 1 end,
-		-- health function will take care of lives.
-		-- health drops to 0 on loading from losing a life (like when you go over a cliff).
-		maxhp=function() return 2048 end,
-		minhp=-40, -- F-ZERO health value can be negative, who knew...
+		func=fzero_snes_swap,
+		gethp=function() return memory.read_s16_le(0x00C9, "WRAM") end,
+		maxhp=function() return 2048 end, -- if health reaches this, we can cancel swaps
+		getgamestate=function() return memory.read_u8(0x0054, "WRAM") == 2 and memory.read_u8(0x0055, "WRAM") == 3 and memory.read_u8(0x005B, "WRAM") == 0 end,
+		getlost=function() 
+			local lost_changed, lost_curr = update_prev("lost", memory.read_u8(0x00C3, "WRAM") >= 0x40)
+			return lost_changed == true and lost_curr == true
+		end,
+		getblasted=function()
+			local blasted_changed, blasted_curr = update_prev("blasted", 
+				-- car is careening based on collision/sprite type; occurs with mines or exploded enemies
+				memory.read_u8(0x00E0, "WRAM") >= 0x40 and
+				memory.read_u8(0x00E0, "WRAM") <= 0x47)
+			return blasted_changed == true and blasted_curr == true
+			end,
+		getbumpedcar=function() return memory.read_u8(0x00C8, "WRAM") > 6 end,
+		getbumpedrail=function() 
+			local bumpedrail_changed, bumpedrail_curr, bumpedrail_prev = update_prev("bumpedrail", memory.read_u8(0x00F5, "WRAM"))
+			return bumpedrail_changed == true and bumpedrail_curr == 7
+		end,
+		grace=120, -- give 2 seconds for reorienting on returning from a swap, let's not go higher than this
 		delay=30,
 		-- because F-ZERO can drain health continuously on every frame,
 		-- you want to build in some kind of sane delay before swapping.
-		gmode=function() return
-			memory.read_u8(0x0054, "WRAM") == 2 -- gamestate = "racing,"
-			and memory.read_u8(0x0055, "WRAM") == 3 -- and the race has started
-			and memory.read_u8(0x00C8, "WRAM") == 0 -- and invulnerability frames are done (0)
-		end,
-		gettogglecheck=function() return memory.read_u8(0x0054, "WRAM") end,
-		-- if gamestate is being changed, sometimes health drops to 0, so don't swap on that frame
-		grace=120, -- give 2 seconds for reorienting on returning from a swap, let's not go higher than this
-
-		--FUTURE POSSIBLE REVISION
-		--func=fzero_snes_swap,
-		--gethittingwall=function() return memory.read_u8(0x00F5, "WRAM") end,
-		--getinvuln=function() return memory.read_u8(0x00C8, "WRAM") end,
-		--getbump=function() return memory.read_u8(0x00E0, "WRAM") end,
-		--delay=30, -- because F-ZERO can drain health continuously on every frame, you want to build in some kind of sane delay before swapping. WILL REQUIRE IMPLEMENTING A COUNTDOWN
 		CanHaveInfiniteLives=true,
 		LivesWhichRAM=function() return "WRAM" end,
 		p1livesaddr=function() return 0x0059 end,
 		maxlives=function() return 8 end,
 		ActiveP1=function() return true end, -- p1 is always active!
+	},
+	['FZeroMaxVel_GBA'] = { -- F-Zero: Maximum Velocity, GBA
+		func = singleplayer_withlives_swap,
+		gmode = function()
+			-- make sure some kind of racing is happening
+			if memory.read_u8(0x0BFA, "IWRAM") ~= 1 then return false end
+			local mode = memory.read_u8(0x0BFD, "IWRAM")
+			-- not demo, ghost replay
+			if mode == 3 or mode == 7 then return false end
+			local substate = memory.read_u8(0x0BFB, "IWRAM")
+			-- countdown, active race, or crashed
+			return substate == 3 or substate == 5 or substate == 10
+		end,
+		p1gethp = function() return memory.read_s16_le(0x12DEA, "EWRAM") end,
+		p1getlc = function() return 1 end, -- only swap on health loss
+		-- don't swap if vehicle selection forces a health change
+		gettogglecheck = function() return memory.read_u8(0x12E16, "EWRAM") end,
+		-- different per vehicle, but this seems like the max value
+		maxhp = function() return 16320 end, -- 255*64
+		minhp = -1, -- swap on 0 health as well
+		swap_exceptions = function()
+			-- if health remains, exempt grazing walls without hitting them
+			return memory.read_s16_le(0x12DEA, "EWRAM") > 0
+				and memory.read_u8(0x12E1F, "EWRAM") == 1
+				and memory.read_u8(0x12E20, "EWRAM") ~= 0
+		end,
+		delay = 30,
+		grace = 120,
+		-- Infinite* Lives section
+		CanHaveInfiniteLives = true,
+		LivesWhichRAM = function() return "IWRAM" end,
+		p1livesaddr = function() return 0x2B6A end,
+		maxlives = function() return 5 end,
+		ActiveP1 = function() -- just grand prix mode
+			return memory.read_u8(0x0BFA, "IWRAM") == 1
+				and memory.read_u8(0x0BFD, "IWRAM") == 0
+		end,
+		-- OTHER NOTES:
+		-- 0x0BFA IWRAM works as a 'gamestate' value: 0 on main menu, 1 when 'gameplay adjacent', etc
+		-- 0x0BFB IWRAM is a 'subvalue' for 0x0BFA e.g. (1,3) countdown, (1,5) racing, (1,10) crash
+		--   rarely damage happens post-race, filter here
+		-- 0x0BFD IWRAM is used here only with 0x0BFA = 1 as stale values can persist
+		--   this is more of a 'gamemode' - used to filter out demo mode and ghost replays (3 and 7)
+		--   as otherwise they will produce the same gamestate values (and can take damage)
+		-- 0x12DF0 EWRAM is the timer for failing a boost start
+		-- 0x12DF4 EWRAM is the 'ui scale' health (0-64)
+		-- 0x12E16 EWRAM is the player machine id, proxy for max health changes
+		-- 0x12E1F EWRAM is the current 'terrain type' id
+		-- demo mode is actually a good tutorial with input overlays ([select] on title to force)
+	},
+	['FZeroGPLegend_GBA'] = { -- F-Zero: GP Legend, GBA
+		func = singleplayer_withlives_swap,
+		gmode = function()
+			-- make sure some kind of racing is happening
+			if memory.read_u8(0x121A, "IWRAM") ~= 1 then return false end
+			local mode = memory.read_u8(0x121D, "IWRAM")
+			-- not credits, demo
+			if mode == 6 or mode == 7 then return false end
+			local _, substate, prev_substate = update_prev('substate', memory.read_u8(0x121B, "IWRAM"))
+			-- countdown, racing, crashed, (maybe just failed)
+			return substate == 4 or substate == 6 or substate == 11 or prev_substate == 6
+		end,
+		p1gethp = function() return memory.read_s16_le(0x149BA, "EWRAM") end,
+		p1getlc = function() return 1 end, -- only swap on health loss
+		-- don't swap if vehicle selection forces a health change
+		gettogglecheck = function() return memory.read_u8(0x149E0, "EWRAM") end,
+		-- different per vehicle, but this seems like the max value
+		maxhp = function() return 16320 end, -- 255*64
+		minhp = -1, -- swap on 0 health as well
+		swap_exceptions = function()
+			-- even if 'racing', don't swap until you actually get control
+			if memory.read_s32_le(0x1759C, "EWRAM") < 0 then return true end
+			-- boosting costs health in this one, so don't swap for that
+			local boost_changed, boost, prev_boost = update_prev('boost', memory.read_u16_le(0x149BC, "EWRAM"))
+			-- health is taken once, right when the boost activates
+			if boost_changed and boost > prev_boost then return true end
+			-- if health remains, exempt grazing walls without hitting them
+			return memory.read_s16_le(0x149BA, "EWRAM") > 0
+				and memory.read_u8(0x149F3, "EWRAM") == 1
+				and memory.read_u8(0x149F4, "EWRAM") ~= 0
+		end,
+		other_swaps = function()
+			-- state pre-filtered by gmode checks
+			-- failed w/o crashing, wait for fadeout
+			return memory.read_u8(0x121B, "IWRAM") == 9, 90
+		end,
+		delay = 30,
+		grace = 120,
+		-- Infinite* Lives section
+		CanHaveInfiniteLives = true,
+		LivesWhichRAM = function() return "IWRAM" end,
+		p1livesaddr = function() return 0x122D end,
+		maxlives = function() return 5 end,
+		ActiveP1 = function() -- just grand prix mode
+			return memory.read_u8(0x121A, "IWRAM") == 1
+				and memory.read_u8(0x121D, "IWRAM") == 0
+		end,
+		-- OTHER NOTES:
+		-- state tracking is similar to Maximum Velocity here, same notes apply
+		-- 0x121A IWRAM: 1 is gameplay, other values assume this unless noted
+		-- 0x121B IWRAM: 4 countdown, 6 racing, 9 fail, 10 give up, 11 crash
+		-- 0x121D IWRAM: 0 gp, 5 time atk, 8 training, 9 story, 10 test, (6 credits, 7 demo)
+		-- status values are also similar
+		-- 0x149BC EWRAM is the timer for player boosts
+		-- 0x149C0 EWRAM is the timer for failing a boost start
+		-- 0x149C4 EWRAM is the 'ui scale' health (0-64)
+		-- 0x149E0 EWRAM is the player machine id
+		-- 0x149F3 EWRAM is the current 'terrain type' id
+		-- 0x1759C EWRAM controls the race timer (see notes for Climax)
+		-- attacking successfully doesn't seem to cost health
+	},
+	['FZeroClimax_GBA'] = { -- F-Zero: Climax, GBA
+		func = singleplayer_withlives_swap,
+		gmode = function()
+			-- make sure some kind of racing is happening
+			if memory.read_u8(0x1796, "IWRAM") ~= 0 then return false end
+			local mode = memory.read_u8(0x1799, "IWRAM")
+			-- not demo, credits, watch
+			if mode == 3 or mode == 6 or mode == 12 then return false end
+			local _, substate, prev_substate = update_prev('substate', memory.read_u8(0x1797, "IWRAM"))
+			-- countdown, racing, crashed, (maybe just failed)
+			return substate == 4 or substate == 5 or substate == 10 or prev_substate == 5
+		end,
+		p1gethp = function() return memory.read_s16_le(0x15556, "EWRAM") end,
+		p1getlc = function() return 1 end, -- only swap on health loss
+		-- don't swap if vehicle selection forces a health change
+		gettogglecheck = function() return memory.read_u8(0x1557D, "EWRAM") end,
+		-- different per vehicle, but this seems like the max value
+		maxhp = function() return 16320 end, -- 255*64
+		minhp = -1, -- swap on 0 health as well
+		swap_exceptions = function()
+			-- even if 'racing', don't swap until you actually get control
+			if memory.read_s32_le(0x18E54, "EWRAM") < 0 then return true end
+			-- boosting costs health in this one, so don't swap for that
+			local boost_changed, boost, prev_boost = update_prev('boost', memory.read_u16_le(0x15558, "EWRAM"))
+			-- health is taken once, right when the boost activates
+			if boost_changed and boost > prev_boost then return true end
+			-- if health remains, exempt grazing walls without hitting them
+			return memory.read_s16_le(0x15556, "EWRAM") > 0
+				and memory.read_u8(0x1557E, "EWRAM") == 1
+				and memory.read_u8(0x1557F, "EWRAM") ~= 0
+		end,
+		other_swaps = function()
+			-- state pre-filtered by gmode checks
+			-- failed w/o crashing, wait for fadeout
+			return memory.read_u8(0x1797, "IWRAM") == 8, 90
+		end,
+		delay = 30,
+		grace = 120,
+		-- Infinite* Lives section
+		CanHaveInfiniteLives = true,
+		LivesWhichRAM = function() return "IWRAM" end,
+		p1livesaddr = function() return 0x17AB end,
+		maxlives = function() return 5 end,
+		ActiveP1 = function() -- grand prix, survival
+			if memory.read_u8(0x1796, "IWRAM") ~= 0 then return false end
+			local mode = memory.read_u8(0x1799, "IWRAM")
+			return mode == 0 or mode == 11
+		end,
+		-- OTHER NOTES:
+		-- similar state tracking to the other GBA F-Zeros
+		-- 0x1796 IWRAM: 0 is gameplay, other values assume this unless noted
+		-- 0x1797 IWRAM: 4 countdown, 5 racing, 8 failure, 9 give up, 10 crash
+		-- 0x1799 IWRAM: 0 gp, 5 time atk, 8 edit run, 10 test, 11 survival, (3 demo, 6 credits, 12 watch)
+		-- additional logic is similar to GP Legend, similar notes
+		-- 0x15558 EWRAM is the timer for player boosts
+		-- 0x1555C EWRAM is the timer for failing a boost start
+		-- 0x15560 EWRAM is the 'ui scale' health (0-64)
+		-- 0x1557D EWRAM is the player machine id
+		-- 0x1557E EWRAM is the current 'terrain type' id
+		-- 0x18E54 EWRAM controls the race timer:
+		--   during a moving start under cpu control the game state reads (0,5) instead of (0,4)
+		--   in this specific case, this value will be -1 until the *actual* start
+		--   yes, sometimes the cpu grazes walls and takes damage in this window >_>
+		-- attacking successfully doesn't seem to cost health
+	},
+	['FZeroX_N64'] = { -- F-Zero X, N64
+		func = singleplayer_withlives_swap,
+		gmode = function()
+			-- filter to states with active gameplay
+			return memory.read_u8(0x0DCE46, "RDRAM") | memory.read_u8(0x0DCE4A, "RDRAM") == 0
+				-- need to filter out demo gameplay (cpu control flag)
+				and memory.read_u8(0x2C4925, "RDRAM") & 128 == 0
+		end,
+		p1gethp = function() return memory.readfloat(0x2C4B48, true, "RDRAM") end,
+		-- a 'virtual' life that is lost whenever your machine explodes
+		p1getlc = function() return memory.read_u8(0x2C4925, "RDRAM") & 4 ~= 0 and 0 or 1 end,
+		maxhp = function() return memory.readfloat(0x2C4B4C, true, "RDRAM") end,
+		swap_exceptions = function()
+			-- boosting drains health, so check for damage flags
+			local flags = memory.read_u8(0x2C4925, "RDRAM")
+			-- pretend attacks give iframes for the sake of gameplay
+			return flags & 6 == 0 or flags & 4 == 0 and memory.read_u8(0x2C4A86, "RDRAM") == 1
+		end,
+		delay = 30,
+		grace = 120,
+		-- Infinite* Lives section
+		CanHaveInfiniteLives = true,
+		LivesWhichRAM = function() return "RDRAM" end,
+		p1livesaddr = function() return 0x0E5ED9 end, -- s16 value, lower byte
+		-- set to 2 rows of icons for UI reasons, you *could* have more but...
+		maxlives = function() return 10 end,
+		ActiveP1 = function() return memory.read_u8(0x0DCE47, "RDRAM") == 1 end, -- gp mode
+		-- OTHER NOTES:
+		-- 0x0DCE47 and 0x0DCE4B store a 'gamestate' value (e.g. 0 title, 1 gp, 7 menu, ...)
+		-- 0x0DCE46 and 0x0DCE4A store the 'type' of this state: 128 menus, 0 gameplay
+		--   the two values are for transitions, one is set first, the other follows
+		--   demo gameplay will still use the same state values, handled separately
+		-- data for p1 machine is a 936-byte block starting at 0x2C4920, other machines follow
+		-- these addresses are mostly bitsets for various things
+		--   0x2C4924: 1 boost from pad, ???
+		--   0x2C4925: 1 ?, 2 damage, 4 exploded, 8 ?, 16 'boost power', 32 ?, 64 racing, 128 cpu
+		--   0x2C4926: ???  64 crashing
+		--   0x2C4927 is what 'surface' you're on: 0 track, 1 heal, 2 dirt, 3 boost, 4 ice
+		--   0x2C4928: 1 'indoors', 2 sliding, 8 healing, 16 boosted, 32 in air, 128 ?
+		-- 0x2C4A86 is set to 1 during attacks, otherwise 0
+		--   it's difficult to attack without taking damage, so this is used as a filter
+		-- max health values are [142,154,166,178,190] for E,D,C,B,A stats
 	},
 	['CV1_NES']={ -- Castlevania I, NES
 		func=singleplayer_withlives_swap,
@@ -5248,6 +5553,33 @@ local gamedata = {
 		-- may add a option for this in the future, but you don't lose *progress* in the story if you game over (similar to Mega Man)
 		-- would also need to consider modes that don't use lives
 	},
+	['WarioWareTwisted_GBA'] = { -- WarioWare: Twisted!, GBA
+		func = singleplayer_withlives_swap,
+		p1gethp = function() return 1 end,
+		p1getlc = function() return memory.read_u8(0x3D86, "IWRAM") end,
+		maxhp = function() return 1 end,
+		swap_exceptions = function()
+			return memory.read_u16_le(0x3AF4, "IWRAM") ~= 2 -- state check, only swap in gameplay
+				or memory.read_u8(0x3D86, "IWRAM") == memory.read_u8(0x3D87, "IWRAM") -- at max lives
+		end,
+		other_swaps = function()
+			local stage = memory.read_u8(0x3AF8, "IWRAM")
+			if stage == 10 or stage == 15 or stage == 99 then -- timed stages
+				local time_up = memory.read_u8(0x4DB4, "IWRAM") == 1
+				return update_prev('time_up', time_up) and time_up, 150
+			end
+			return false
+		end,
+		-- OTHER NOTES:
+		-- 0x3AF4 IWRAM is game state: 1 title, 2 gameplay, 4 main menu, etc
+		-- 0x3AF8 IWRAM is which 'stage': 0-15 for story mode stages, 99+ for bonus/spindex games
+		-- for timed stages: (99 lives, gameover on time up)
+		--   0x4DB0 IWRAM timer: counts 'ticks' with lower byte fractional value (deducted per frame)
+		--     starts at 200 << 8 for 20 'seconds', actual time affected by speedups
+		--     value is soft capped at 300 ticks (won't get bonus time past that)
+		--     snaps to zero on value falling below 256 (1 tick)
+		--   0x4DB4 IWRAM: goes 0 -> 1 on time up, resets after gameover
+	},
 	['MagicalDoropie_NES']={ -- Magical Doropie / Krion Conquest, NES
 		func=iframe_health_swap,
 		get_health=function() return memory.read_u8(0x004C, "RAM") end,
@@ -5282,6 +5614,36 @@ local gamedata = {
 		-- you get 1ups for 50 bananas that doesn't account for that, so 99 is a
 		-- safe compromise. 3 lives max drawn on HUD, but higher values do count
 		ActiveP1=function() return true end, -- p1 is always active!
+	},
+	['MonkeyBallTouchRoll_DS'] = { -- Super Monkey Ball: Touch & Roll, DS
+		func = singleplayer_withlives_swap,
+		gmode = function() return memory.read_u32_le(0x0E870C, "Main RAM") == 3 end,
+		p1gethp = function() return 1 end,
+		p1getlc = function() return memory.read_u8(0x1FBF34, "Main RAM") end,
+		maxhp = function() return 1 end,
+		other_swaps = function()
+			if memory.read_u8(0x1FBF34, "Main RAM") == 0 then
+				-- swap for a gameover at zero lives, delay for text to show
+				local gameover = memory.read_u8(0x0C88CB, "Main RAM") == 0
+				return update_prev('gameover', gameover) and gameover, 45
+			end
+			return false
+		end,
+		-- Infinite* Lives section
+		CanHaveInfiniteLives = true,
+		p1livesaddr = function() return 0x1FBF34 end,
+		LivesWhichRAM = function() return "Main RAM" end,
+		maxlives = function() return 69 end,
+		ActiveP1 = function() return memory.read_u32_le(0x0E870C, "Main RAM") == 3 end,
+		-- OTHER NOTES:
+		-- gamestate is at 0x0E870C: 1 title, 2 menus, 3 gameplay, etc
+		-- lives are uncapped, display is mod 100
+		--   practice mode holds lives constant (normally at 99)
+		-- you gameover on failing a level with zero lives
+		--   0x0C88CB goes 1 -> 0 when this happens
+		--   flag also cycles when starting gameplay post-credits,
+		--   however at that point lives should be set > 0
+		-- the banana counter for unlocking world 12 is at 0x1FBF70
 	},
 	['BATMAN_NES']={ -- Batman, NES
 		func=singleplayer_withlives_swap,
@@ -5687,6 +6049,62 @@ local gamedata = {
 		gmode=function() return memory.read_u8(0x1CE, "IWRAM") == 85 end, -- Not 100% sure about this, but seems good
 		grace=45,
 	},
+	['KururinParadise_GBA'] = { -- Kururin Paradise, GBA
+		func = function(gamemeta)
+			-- minimal version of health_swap that does other_swaps first
+			return function()
+				local swap, delay = gamemeta.other_swaps()
+				if swap then
+					return true, delay or gamemeta.delay
+				end
+				local health_changed, health, prev_health = update_prev('health', gamemeta.get_health())
+				if not gamemeta.is_valid_gamestate() then
+					return false
+				end
+				local max_health = gamemeta.get_max_health and gamemeta.get_max_health()
+				if health_changed and health < prev_health and (not max_health or health < max_health) then
+					return true, gamemeta.delay
+				end
+				return false
+			end
+		end,
+		get_health = function() return memory.read_s8(0x5450, "IWRAM") end,
+		get_max_health = function() return memory.read_s8(0x5451, "IWRAM") end,
+		-- normal gameplay, not in a minigame, needed for health changes to be valid
+		is_valid_gamestate = function() return memory.read_u8(0x0644, "IWRAM") == 0 end,
+		other_swaps = function()
+			local minigame = memory.read_u8(0x0644, "IWRAM")
+			if minigame > 0 and memory.read_u8(0x0645, "IWRAM") == 0 then
+				local result_changed, result, prev_result = update_prev('result', memory.read_s32_le(0x0650, "IWRAM"))
+				-- swap if a story mode minigame was just failed
+				if result_changed and result == 0 and prev_result < 0 then
+					-- some minigames fail immediately, others wait until returning to the map
+					if minigame == 9 or minigame == 12 then return true, 0
+					-- *this game specifically* will also set this value if you quit manually
+					-- so also check that the minigame finished when this result came in
+					-- (can cause a 'failure' cutscene to play, seems like a bug)
+					elseif minigame == 7 then return memory.read_u8(0x067A, "IWRAM") == 2, 0
+					else return true, 115 end -- add delay for the minigames that need it
+				end
+			end
+			return false
+		end,
+		grace = 45,
+		-- OTHER NOTES:
+		-- 0x3449 IWRAM works as a game state: 0 menus/etc, 1 minigames, 2 gameplay
+		--   set on screen wipes, actual value may include 0x3448 and be an offset?
+		-- 0x53A8 IWRAM holds status flags during normal gameplay
+		--   8 is the flag for cpu stage demos in practice mode (health is 0 during this)
+		-- 0x0644 IWRAM is the minigame id, 1-16 (0 for main game)
+		--   each minigame and the main game have different uses of the same memory space
+		--   regular health is not valid during minigames for this reason
+		-- 0x0645 IWRAM is 0 for minigames in story mode, 1 if from the menu
+		-- 0x0650 IWRAM holds the minigame result: -1 during play, then either:
+		--   1 or 0 for pass/fail if played in story mode
+		--   a value representing 'score' if played from the menu (time/points/etc)
+		-- 0x067A IWRAM is 0 during active gameplay, 1 when paused, 2 on minigame end
+		--   minigame 12 doesn't set this to 2 on ending for whatever reason
+	},
 	['KirbySuperStar_SNES']={ -- Kirby Super Star, (SNES)
 		func=singleplayer_withlives_swap,
 		p1gethp=function() return memory.read_u8(0x00BB, "WRAM") end,
@@ -5739,6 +6157,40 @@ local gamedata = {
 			if title_card_changed then return true end
 			return false
 		end,
+	},
+	['KirbyCrystalShards_N64'] = { -- Kirby 64: The Crystal Shards, N64
+		func = singleplayer_withlives_swap,
+		gmode = function()
+			local state = memory.read_u32_be(0x0BE4F0, "RDRAM")
+			return state == 15 or state == 17 or state == 33
+		end,
+		p1gethp = function() return memory.readfloat(0x0D6E50, true, "RDRAM") end,
+		p1getlc = function() return memory.read_s32_be(0x0D6E4C, "RDRAM") end,
+		maxhp = function() return 6 end,
+		other_swaps = function()
+			-- additionally swap for a death in the boss rush
+			if memory.read_u32_be(0x0BE4F0, "RDRAM") == 33 then
+				local substate = memory.read_u32_be(0x0BE4F8, "RDRAM")
+				if update_prev('substate', substate) and substate == 6 then
+					return true, 330 -- wait for the death animation
+				end
+			end
+			return false
+		end,
+		-- Infinite* Lives section
+		CanHaveInfiniteLives = true,
+		p1livesaddr = function() return 0x0D6E4F end, -- big-endian, lowest byte
+		LivesWhichRAM = function() return "RDRAM" end,
+		maxlives = function() return 70 end,
+		ActiveP1 = function()
+			local state = memory.read_u32_be(0x0BE4F0, "RDRAM")
+			-- anything after the title screen, except the boss rush
+			-- state *must* also be valid in general, so no unbounded range
+			return state >= 10 and state < 33
+		end,
+		-- OTHER NOTES:
+		-- 0x0BE4F0 is gamestate: 15 in level, 17 gameover, 33 boss rush
+		-- you only have one life for the boss rush, regardless of life count
 	},
 	['AdvMagicKingdom_NES']={ -- Adventures in the Magic Kingdom, NES
 		func=singleplayer_withlives_swap,
@@ -5834,6 +6286,20 @@ local gamedata = {
 		maxlives=function() return 69 end,
 		ActiveP1=function() return true end, -- p1 is always active!
 	},
+	['Celeste_GBA'] = { -- Celeste [Pico-8] (homebrew port), GBA
+		func = singleplayer_withlives_swap,
+		p1gethp = function() return 1 end,
+		-- use death counter as 'negative lives'
+		p1getlc = function() return -memory.read_u16_le(0x157C, "IWRAM") end,
+		maxhp = function() return 1 end,
+	},
+	['Celeste2_GBA'] = { -- Celeste 2 [Pico-8] (homebrew port), GBA
+		func = singleplayer_withlives_swap,
+		p1gethp = function() return 1 end,
+		-- use death counter as 'negative lives'
+		p1getlc = function() return -memory.read_u16_le(0x44D4, "IWRAM") end,
+		maxhp = function() return 1 end,
+	},
 	['DuckTales_NES']={ -- Ducktales, NES
 		func=singleplayer_withlives_swap,
 		p1gethp=function() return ((1 - memory.read_u8(0x0342, "RAM")) + (1 - memory.read_u8(0x0346, "RAM")) + (1 - memory.read_u8(0x034a, "RAM")) + ((1 - memory.read_u8(0x034c, "RAM")//192) * (1 - memory.read_u8(0x034e, "RAM"))) + ((1 - memory.read_u8(0x034c, "RAM")//192) * (1 - memory.read_u8(0x0350, "RAM")//192) * (1 - memory.read_u8(0x0352, "RAM")))) end, 
@@ -5916,6 +6382,34 @@ local gamedata = {
 		-- so, only refill continues, not lives
 		maxlives=function() return 2 end,
 		ActiveP1=function() return true end, -- p1 is always active!	
+	},
+	['Goldeneye007_N64'] = { -- Goldeneye: 007, N64
+		func = health_swap,
+		get_health = function() -- health + body armour
+			local ptr = memory.read_u32_be(0x079EE0, "RDRAM") -- p1 data
+			-- expect a 'standard format' pointer
+			if ptr >> 24 ~= 0x80 then return 0.0 end
+			ptr = ptr & 0x7FFFFF
+			return memory.readfloat(ptr + 0xDC, true, "RDRAM")
+				+ memory.readfloat(ptr + 0xE0, true, "RDRAM")
+		end,
+		is_valid_gamestate = function()
+			return memory.read_s32_be(0x02A8C0, "RDRAM") == 11 -- in a level
+				and memory.read_s32_be(0x02A8DC, "RDRAM") == 1 -- not a demo
+				and memory.read_s32_be(0x065378, "RDRAM") == 0 -- not loading
+		end,
+		other_swaps = function() return false end,
+		delay = 15,
+		grace = 90,
+		-- OTHER NOTES:
+		-- 0x079EE[0/4/8/C]: pointers to p1/2/3/4 data
+		--   data size is 0x2A80 (10880) bytes?
+		-- 0x07A0B0: pointer to 'active' player data?
+		--   in multiplayer, rapidly cycles between players
+		-- 0x02A8C0 is the current gamestate: 11 is the 'gameplay' value
+		-- 0x02A8DC is 1 during active gameplay, 0 during demos/ending
+		-- 0x065378 is set to 1 while pointers change
+		--   newly-allocated health values are defaulted to 1.0 + 0.0
 	},
 	['HammerinHarry_NES']={ -- Hammerin' Harry, NES
 		func=singleplayer_withlives_swap,
@@ -6036,6 +6530,44 @@ local gamedata = {
 		p1livesaddr=function() return 0x00b6 end,
 		maxlives=function() return 9 end,
 		ActiveP1=function() return true end, -- p1 is always active!
+	},
+	['Scurge_GBA'] = { -- Scurge: Hive, GBA
+		func = iframe_health_swap,
+		get_iframes = function() return memory.read_u16_le(0x50E0, "IWRAM") end,
+		get_health = function() return memory.read_u16_le(0xB704, "EWRAM") end,
+		-- needed to filter quitting which sets health to zero (so no iframe checks)
+		is_valid_gamestate = function() return memory.read_u8(0x14F8C, "EWRAM") == 1 end,
+		other_swaps = function() return false end,
+		grace = 90,
+		grace_on_hit = true,
+		-- OTHER NOTES:
+		-- 60 iframes on hit by default, (poison, infection, etc) damage gives none
+		-- health value is 25 on startup, but not valid (8500) on the title screen
+		-- max health is visible at 0x14F54 EWRAM, range is 25-999, depends on player level
+		--   this is the display value, sometimes -1, actual value probably just calculated
+		-- infection level is 0x50F5 IWRAM (1-100)
+		-- experience is 0x18FEC EWRAM, 4-byte LE (max level is 66)
+		-- 0x50E4 IWRAM is a non-null pointer while you're grabbed?
+		-- quitting is basically a soft reset that's hard to filter :<
+		--   0x14F8C EWRAM is one of the few values that is actively set before the reset
+		--   set to 0 for this, as well as room transitions and loading, 1 otherwise
+	},
+	['Scurge_DS'] = { -- Scurge: Hive, DS
+		func = iframe_health_swap,
+		get_iframes = function() return memory.read_u16_le(0x1E7D50, "Main RAM") end,
+		get_health = function() return memory.read_u16_le(0x1E9790, "Main RAM") end,
+		-- needed to filter quitting which sets health to zero (so no iframe checks)
+		is_valid_gamestate = function() return memory.read_u8(0x0EEA4C, "Main RAM") == 1 end,
+		other_swaps = function() return false end,
+		grace = 90,
+		grace_on_hit = true,
+		-- OTHER NOTES:
+		-- generally the same as the GBA version but with different memory addresses
+		-- maxhp is 0x0EEA14, same notes
+		-- infection level is 0x1E7D65
+		-- experience is 0x1E85E0
+		-- quitting might be easier as max health value gets zeroed out first here
+		--   currently the 0x0EEA4C state filter is the same as on GBA
 	},
 	['ShinobiIII_GEN']={ -- Shinobi III, Genesis
 		func=singleplayer_withlives_swap,
@@ -6207,6 +6739,27 @@ local gamedata = {
 		return false
 		end,
 	},
+	['WarioLand4_GBA'] = { -- Wario Land 4, GBA
+		func = iframe_health_swap,
+		get_iframes = function() return memory.read_u8(0x189C, "IWRAM") end,
+		get_health = function() return memory.read_u8(0x1910, "IWRAM") end,
+		is_valid_gamestate = function() return memory.read_u16_le(0x0C3A, "IWRAM") == 2 end,
+		other_swaps = function()
+			local timer = memory.read_u8(0x0047, "IWRAM")
+			return update_prev('timer', timer) and timer == 10 -- loss due to timer
+		end,
+		-- OTHER NOTES: (addresses in IWRAM unless stated otherwise)
+		-- 1 iframe on hit, remainder given when unstunned
+		-- gamestate at 0x0C3A, subvalue at 0x0C3C
+		-- health countdown at end of level is a copy
+		-- real health is reset on level start (normally to 4)
+		-- state changes to 2 before health is reset (check iframes?)
+		--   otherwise, health is reset in substate 0, filter that?
+		-- timer status hits 4 on time over, ends at 10 (after animations)
+		-- actual timer at 0x0BF0, sparse BCD format (2:45 -> 00 02 04 05)
+		-- total money at 0x0BF4, per-level at 0x0BF8 (stored value * 10)
+		-- medals (shop currency) at 0x0008
+	},
 	['IndianaJonesLC_GEN']={ -- Indiana Jones & The Last Crusade, Genesis
 		func=singleplayer_withlives_swap,
 		p1gethp=function() return memory.read_s16_be(0x7F58, "68K RAM") end,
@@ -6241,7 +6794,7 @@ local gamedata = {
 		maxlives=function() return 69 end,
 		ActiveP1=function() return true end, -- p1 is always active!	
 	},
-	['CrashBandicoot4_NES']={ -- Crash Bandicoot 4 (bootleg), NES
+	['CrashBandicoot4_GBA']={ -- Crash Bandicoot 4 (bootleg), GBA
 		func=singleplayer_withlives_swap,
 		p1gethp=function() return memory.read_u8(0x62a2, "IWRAM") end,
 		p1getlc=function() return memory.read_u8(0x009a, "IWRAM") end,
@@ -7739,7 +8292,48 @@ local gamedata = {
 		ActiveP1=function() return true end, -- p1 is always active!
 		delay=5, -- good to give a slightly higher delay to make the damage more readable to the player
 	},
-
+	['MarioKart_DS'] = { -- Mario Kart DS
+		func = function(gamemeta)
+			return function()
+				local swap = false
+				
+				local stun = gamemeta.get_value(0x17B408, 0x110) > 0
+				local fall = gamemeta.get_value(0x17ACF8, 0x3C0) > 0
+				local squish = gamemeta.get_value(0x17ACF8, 0x48) & 0x4000000 ~= 0
+				
+				local damage = stun or fall or squish
+				
+				if update_prev('damage', damage) and damage then swap = true end
+				
+				if not gamemeta.is_valid_gamestate() then swap = false end
+				
+				return swap, gamemeta.delay
+			end
+		end,
+		get_value = function(location, offset)
+			local ptr = memory.read_u32_le(location, "Main RAM")
+			if ptr >> 24 == 0x02 then -- DS Main RAM
+				local addr = (ptr & 0x3FFFFF) + offset
+				return memory.read_u32_le(addr, "Main RAM")
+			end
+			return 0
+		end,
+		is_valid_gamestate = function()
+			-- during a race and not a demo/replay
+			return memory.read_u32_le(0x17C800, "Main RAM") == 1
+				and memory.read_u32_le(0x175644, "Main RAM") == 2
+		end,
+		delay = 10,
+		-- OTHER NOTES:
+		-- 0x17ACF8: pointer to kart data
+		--   +0x048: status word, bitset of many status flags
+		--     << 26: flag for being squished
+		--   +0x3C0: timer that counts up after falls, before lakitu rescue
+		-- 0x17B408: pointer to data
+		--   +0x110: timer that counts up on hits from items/stage hazards
+		-- 0x17C800 is the race status: 0 before, 1 during, 2 after
+		-- 0x175644: 0 menus, 1 for replays, 2 in races, 3 in demos/after race
+	},
 	['CrashBandicoot1_PS1_USA']={
 		-- TODO: swap on death in bonus stages
 		func=function(gamemeta)
