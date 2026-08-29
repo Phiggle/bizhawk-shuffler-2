@@ -120,6 +120,9 @@ plugin.description =
 	-Kirby: Super Star (SNES), 1p
 	-Kirby: Nightmare in Dream Land (GBA), 1p
 	-Kirby and the Amazing Mirror (GBA), 1p
+	-Kirby's Block Ball (GB), 1p
+	-Kirby's Pinball Land (GB), 1p
+
 	
 	SONIC BLOCK
 	-Sonic the Hedgehog (Genesis/Mega Drive), 1p
@@ -5979,6 +5982,68 @@ local gamedata = {
 			if title_card_changed then return true end
 			return false
 		end,
+	},
+	['KirbyBlockBall_GB']={ -- Kirby's Block Ball (GB)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return 1 end, -- no health system
+		p1getlc=function() return memory.read_u8(0x01C9, "WRAM") end,
+		maxhp=function() return 1 end,
+		gmode=function() return memory.read_u8(0x014C, "WRAM")==227 end,
+		other_swaps=function()
+			-- swap if kirby loses a power to damage
+			local powerstate_changed, powerstate_curr, powerstate_prev = update_prev('powerstate', memory.read_u8(0x1FF1, "WRAM"))
+			return powerstate_changed and powerstate_curr == 0 end,
+		swap_exceptions=function()
+			-- lives are converted to points after completing a boss. to prevent continual shuffling, suppress shuffling when on the boss stage and the boss is dead
+			local on_boss_stage = memory.read_u8(0x0167, "WRAM")==10
+			local boss_health = memory.read_u8(0x1910, "WRAM")
+			return on_boss_stage and boss_health == 0 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x01C9 end,
+		LivesWhichRAM=function() return "WRAM" end,
+		maxlives=function() return 70 end,
+		ActiveP1=function()
+			-- lives are converted to points after completing a boss. suppress infinite lives when on boss stage and boss is dead to prevent infinite lives extending countdown
+			local on_boss_stage = memory.read_u8(0x0167, "WRAM")==10
+			local boss_health = memory.read_u8(0x1910, "WRAM")
+			return not (on_boss_stage and boss_health == 0) end,
+	},
+	['KirbyPinballLand_GB']={ -- Kirby's Pinball Land (GB)
+		func=function() return function()	
+			local lives_changed, lives_curr, lives_prev = update_prev('lives', memory.read_u8(0x00B0, "WRAM"))
+			
+			--[[ board player is current on. note that this is inverted; elevation increases as player falls onto lower boards.
+			6 = lowest board, 5 = low transition area, 4 = middle board, 3 = higher transition area, 2 = top board, 0 boss area / stage select menu ]]
+			local curr_elevation = memory.read_u8(0x1F0A, "WRAM")
+			
+			--[[ To avoid rapid shuffles when falling down and reduce shuffles when failing to climb up, we'll only consider proper boards, not the transitions between boards.
+			To that end, we won't be looking at the actual RAM value for the previous frame, which may be a transition area, but only the proper boards. ]]
+			if prevdata["latest_proper_elevation"] == nil then prevdata["latest_proper_elevation"] = -1 end -- temporary junk value
+			
+			--[[ both updating our latest proper elevation and shuffling for falling onto a new proper board require us to be currently on a proper board, so we may as well
+			check that before doing either ]]
+			if curr_elevation == 0 or curr_elevation == 2 or curr_elevation == 4 or curr_elevation == 6 then
+
+				--[[ All proper boards are 2 apart, including the boss area even though it does not have a transition board between it and the top board. As a result, we should
+				be able to identify all shuffles from falling down to a lower board by the value increasing by 2. The player is also ejected onto the top board when they fall
+				out of the boss arena, so that should be handled here as well. ]]
+				if curr_elevation == (prevdata["latest_proper_elevation"] + 2) then
+					prevdata["latest_proper_elevation"] = curr_elevation
+					return true end
+				
+				-- if player was on a proper board and not a transition area, consider it the last proper elevation for the next frame
+				prevdata["latest_proper_elevation"] = curr_elevation end
+			
+			-- Falling out of the lowest board is not considered moving to a different board, so we'll use lives to handle a shuffle there. 
+			if lives_changed and lives_curr == (lives_prev - 1) then return true end
+			
+			return false end
+		end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x00B0 end,
+		LivesWhichRAM=function() return "WRAM" end,
+		maxlives=function() return 21 end,
+		ActiveP1=function() return true end, -- P1 is always active!
 	},
 	['AdvMagicKingdom_NES']={ -- Adventures in the Magic Kingdom, NES
 		func=singleplayer_withlives_swap,
