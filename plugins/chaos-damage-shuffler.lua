@@ -104,7 +104,9 @@ plugin.description =
 	-Super Metroid x LTTP Crossover Randomizer, aka SMZ3 (SNES), 1p
 
 	CONTRA BLOCK
+	-Contra (Arcade), 1p
 	-Contra/Probotector (NES), 1-2p
+	-Super Contra (Arcade), 1p
 	-Super C/Super Contra/Probotector II (NES), 1-2p
 	-Contra III: The Alien Wars/Super Probotector: Alien Rebels/Contra Spirits (SNES), 1-2p
 	-Contra: Hard Corps (Genesis/Mega Drive), 1-2p
@@ -4837,6 +4839,27 @@ local gamedata = {
 		-- so you get 60 + x lives instead.
 		ActiveP1=function() return true end, -- P1 is always active!
 	},
+	['Contra_ARC']={ -- Contra (Arcade)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return 1 end,
+		p1getlc=function()
+			--(binary-coded decimal conversation taken from Bubsy Jaguar implementation)
+			-- Need to convert binary-coded decimal hexadecimal value to just plain decimal
+			local livesHex = memory.read_u8(0x0081, "hd6309e : ram : 0x1000-0x1FFF")
+			-- Get upper nybble, bit-shift right 4 bits
+			local tens = (livesHex & 0xF0)>>4
+			-- Just the lower nybble
+			local ones = livesHex & 0x0F
+			-- Merge 'em
+			local lives = (tens * 10) + ones
+			return lives end,
+		maxhp=function() return 1 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x0081 end,
+		LivesWhichRAM=function() return "hd6309e : ram : 0x1000-0x1FFF" end,
+		maxlives=function() return 0x71 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+	},
 	['Contra_NES']={ -- Contra/Probotector (NES)
 		func=twoplayers_withlives_swap,
 		p1gethp=function() return 0 end,
@@ -4911,6 +4934,18 @@ local gamedata = {
 		ActiveP2=function() return memory.read_u8(0x00C3, "RAM") ~= 1 end,
 		-- player is either inactive or in death sequence when these addresses == 1, lives go down the same frame that these addresses tick to 0
 		maxhp=function() return 0 end,
+	},
+	['SuperContra_ARC']={ -- Super Contra (Arcade)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return 1 end,
+		p1getlc=function() return memory.read_u8(0x00A0, "konami_cpu : ram : 0x4000-0x57FF") end,
+		maxhp=function() return 1 end,
+		gmode=function() return memory.read_u8(0x0001, "konami_cpu : ram : 0x4000-0x57FF")==2 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x00A0 end,
+		LivesWhichRAM=function() return "konami_cpu : ram : 0x4000-0x57FF" end,
+		maxlives=function() return 71 end,
+		ActiveP1=function() return true end, -- p1 is always active!
 	},
 	['ContraIII_SNES']={ -- Contra III/Probotector (NES)
 		func=twoplayers_withlives_swap,
