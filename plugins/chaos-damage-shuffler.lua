@@ -13,6 +13,7 @@ plugin.settings =
 	{ name='DebugSingleGame', type='boolean', label='Debugging: Rearm the shuffler logic even if no new game was loaded' },
 	{ name='SMW2YI_MiniBonusSwaps', type='boolean', label="Yoshi's Island: Shuffle on Mini Battle damage/loss", default=true},
 	{ name='IceClimberBonusSwaps', type='boolean', label="Ice Climber (NES): Shuffle on failing the bonus game"},
+	{ name='GQ1NoRandomEncounters', type='boolean', label="Gargoyle's Quest 1: No random encounters" },
 	{ name='grace', type='number', label="Minimum grace period before swapping (won't go < 10 frames)", default=10 },
 	{ name='GraceOnHit', type='boolean', label="Apply grace period from last hit instead of last swap" },
 }
@@ -109,6 +110,7 @@ plugin.description =
 	-Contra: Hard Corps (Genesis/Mega Drive), 1-2p
 
 	KONG BLOCK
+	-Donkey Kong (GB), 1p
 	-Donkey Kong Country (SNES), 1p, 2p Contest, or 2p Team
 	-Donkey Kong Country 2: Diddy's Kong Quest (SNES), 1p, 2p Contest, or 2p Team
 	-Donkey Kong Country 3: Dixie Kong's Double Trouble (SNES), 1p, 2p Contest, or 2p Team
@@ -178,6 +180,7 @@ plugin.description =
 	-Einhänder (PSX), 1p
 	-Family Feud (SNES), 1-2p
 	-Garfield: A Week of Garfield (NES), 1p
+	-Gargoyle's Quest - Ghosts'n Goblins (GB), 1p
 	-Gargoyle's Quest II (NES), 1p
 	-Ghosts'n Goblins (NES), 1p
 	-Ghouls'n Ghosts (Genesis/Mega Drive), 1p
@@ -212,6 +215,7 @@ plugin.description =
 	-Lion King 2 (bootleg) (Genesis/Mega Drive), 1p
 	-Magical Kid's Doropie / Krion Conquest (NES), 1p
 	-Majuu Ou (Japan) / King of Demons (SNES), 1p
+	-Makai Mura for WonderSwan (WS), 1p
 	-Marble Madness (NES), 1-2p
 	-Mario Kart: Super Circuit (SNES), 1p, Grand Prix - shuffles on collisions with other karts (lost coins or have 0 coins), falls
 	-Mario Kart (DS), 1p
@@ -5067,6 +5071,21 @@ local gamedata = {
 		delay=7,
 		-- let players see the knockdown happen
 	},
+	['DonkeyKong94_GB']={ -- Donkey Kong (GB)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return 1 end, -- no health system
+		p1getlc=function() return memory.read_u8(0x1A43, "WRAM") end,
+		maxhp=function() return 1 end,
+		other_swaps=function()  
+			-- when player is carrying an item, getting hit stuns them instead of killing them. add an additional shuffle for this circumstance
+			local stunstate_changed, stunstate_curr, stunstate_prev = update_prev('stunstate', memory.read_u8(0x1DD7, "WRAM"))
+			return stunstate_changed and stunstate_curr == 160 end, -- stunstate should be 160 only when hit while carrying item
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x1A43 end,
+		LivesWhichRAM=function() return "WRAM" end,
+		maxlives=function() return 69 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+	},
 	['DKC1_SNES']={ -- Donkey Kong Country (SNES)
 		func=iframe_health_swap,
 		is_valid_gamestate=function() return memory.read_u8(0x000527, "WRAM") ~= 1 end,
@@ -5600,6 +5619,25 @@ local gamedata = {
 		maxlives=function() return 3 end,
 		p1livesaddr=function() return 0x0043 end,
 		LivesWhichRAM=function() return "RAM" end,
+	},
+	['MakaiMuraForWS_WS']={ -- Makai Mura for WonderSwan, WS
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return 2 - memory.read_s8(0x001A12, "RAM") end, -- armour status. address flags armor as 1 for broken and 0 for unbroken, so damage is adding 1
+		p1getlc=function() return memory.read_u8(0x001E2A, "RAM") end,
+		maxhp=function() return 2 end,
+		gmode=function() return memory.read_u8(0x001801, "RAM")==56 end,
+		other_swaps=function() return false end,
+		swap_exceptions=function()
+			--[[ player landing on spikes or lava causes the player to directly enter a death animation, losing their armour at the start of the animation. suppress shuffling
+			on armour loss during death animation so that only the life loss triggers a shuffle ]]
+			local armour_status_changed, armour_status_curr, armour_status_prev = update_prev('armour_status', memory.read_s8(0x001A12, "RAM"))
+			local in_death_animation = memory.read_u8(0x001A1B, "RAM") == 1
+			return armour_status_changed and in_death_animation and armour_status_curr == 1 and armour_status_prev == 0 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x001E2A end,
+		LivesWhichRAM=function() return "RAM" end,
+		maxlives=function() return 9 end,
+		ActiveP1=function() return true end, -- p1 is always active!
 	},
 	['JUNKY_BALL_MR_GBA']={ -- Super Monkey Ball Jr., GBA
 		func=singleplayer_withlives_swap,
@@ -8182,7 +8220,27 @@ local gamedata = {
 			local balloon_changed, balloon_curr, balloon_prev = update_prev('balloon', memory.read_u8(0x050C, "RAM"))
 			return balloon_changed and balloon_curr < balloon_prev end,
     },
-	['GargoylesQuest2_NES']={ -- Gargoyle's Quest II, NES, (US)
+	['GargoylesQuest1_GB']={ -- Gargoyle's Quest - Ghosts'n Goblins, GB
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x020A, "WRAM") end,
+		p1getlc=function() return memory.read_u8(0x1F17, "WRAM") end,
+		maxhp=function() return 5 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x1F17 end,
+		LivesWhichRAM=function() return "WRAM" end,
+		maxlives=function() return 9 end,
+		ActiveP1=function() return true end, -- p1 is always active!
+		cheats = {
+			GQ1NoRandomEncounters = { -- This surpresses random encounters from occurring on the map screen.
+				func = function()
+					if memory.read_u8(0x00FD, "WRAM") == 215 then -- indicator of being on map screen
+						memory.write_u8(0x1F36, 0, "WRAM") end -- controls chances of random encounter
+				end,
+				on_frame = true,
+			},
+		},
+	},
+	['GargoylesQuest2_NES']={ -- Gargoyle's Quest II, NES
 		func=singleplayer_withlives_swap,
 		p1gethp=function() return memory.read_u8(0x0038, "RAM") end,
 		p1getlc=function() return memory.read_u8(0x0039, "RAM") end,
