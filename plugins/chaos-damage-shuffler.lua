@@ -162,6 +162,7 @@ plugin.description =
 	-Bao Qing Tian (Ch) (NES), 1p
 	-Batman (NES), 1p
 	-Blades of Steel (NES - NA/Europe), 1-2p
+	-Bonanza Bros (Arcade), 1p
 	-Bonk's Adventure (TG-16), 1p
 	-Bonk's Revenge (TG-16), 1p
 	-Bonk III - Bonk's Big Adventure (TG-16), 1p
@@ -5240,6 +5241,18 @@ local gamedata = {
 			-- if both fighters just dropped to 0, that's "end of battle"
 			-- update_prev set up because there could be further exceptions identified later
 		CanHaveInfiniteLives=false, -- Blades of Steel does not work this way.
+	},
+	['BonanzaBros_ARC']={ -- Bonanza Bros (US, Floppy DS3-5000-07d? Based)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x00059A, "m68000 : ram : 0xF00000-0xF3FFFF") end, -- lives
+		p1getlc=function() return memory.read_u8(0x038428, "m68000 : ram : 0x80000-0xBFFFF") end, -- coins: seems to revert if pushed too high at once
+		maxhp=function() return 9 end,
+		gmode=function() return memory.read_u8(0x000405, "m68000 : ram : 0xF00000-0xF3FFFF")==4 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x00059A end,
+		LivesWhichRAM=function() return "m68000 : ram : 0xF00000-0xF3FFFF" end,
+		maxlives=function() return 9 end,
+		ActiveP1=function() return true end, -- p1 is always active!
 	},
 	['DoubleDragon1_NES']={ -- Double Dragon NES
 		func=twoplayers_withlives_swap,
