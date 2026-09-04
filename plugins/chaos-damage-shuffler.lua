@@ -4707,10 +4707,19 @@ local gamedata = {
 	},
 	['NeoTurfMasters_ARC']={ -- Neo Turf Masters / Big Tournament Golf
 		func=health_swap,
-		is_valid_gamestate=function() return memory.read_u8(0x000163, "m68000 : ram : 0x100000-0x10FFFF")==178 -- gmode
-			and memory.read_u8(0x002EA6, "m68000 : ram : 0x100000-0x10FFFF")~=255 end, -- preventing additional swapping for stroke penalties (value is 255 for penalty stroke)
-		get_health=function() return -memory.read_u8(0x007006, "m68000 : ram : 0x100000-0x10FFFF") end,
-		other_swaps=function() return false end,
+		is_valid_gamestate=function() return (memory.read_u8(0x000163, "m68000 : ram : 0x100000-0x10FFFF")==178 -- gmode
+			and memory.read_u8(0x002EA6, "m68000 : ram : 0x100000-0x10FFFF")~=255) -- value at 255 shows for onscreen messages like penalty strokes; prevent shuffling on penalty
+			or memory.read_u8(0x007085, "m68000 : ram : 0x100000-0x10FFFF")==1 -- specifically allow shuffling on hole complete despite displaying an onscreen message
+			end,
+		get_health=function()
+			-- score incrementation occurs before the stroke, so we ignore the first incrementation to prevent the appearance of a false shuffle at the start
+			return math.min(-memory.read_u8(0x007006, "m68000 : ram : 0x100000-0x10FFFF"), -1)
+			end,
+		other_swaps=function()
+			-- to compensate for ignoring the first stroke, we shuffle one more time on a completed hole
+			local holecompleted_changed, holecompleted_curr, holecompleted_prev = update_prev('stagecompleted', memory.read_u8(0x007085, "m68000 : ram : 0x100000-0x10FFFF"))
+			if holecompleted_changed and holecompleted_curr == 1 and holecompleted_prev == 0 then return true, 253 end
+			end,
 		CanHaveInfiniteLives=true,
 		p1livesaddr=function() return 0x00D572 end, -- holes remaining
 		LivesWhichRAM=function() return "m68000 : ram : 0x100000-0x10FFFF" end,
