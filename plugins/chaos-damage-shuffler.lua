@@ -2644,15 +2644,43 @@ local gamedata = {
 		maxhp=function() return 60 end,
 	},
 	['SuperDodgeBall_ARC']={ -- Super Dodge Ball / Kunio no Nekketsu Toukyuu Densetsu (Arcade)
-		func=health_swap,
-		is_valid_gamestate=function() return memory.read_u8(0x001075, "m68000 : ram : 0x100000-0x10FFFF")==7 end,
-		get_health=function()
-			-- the three team members have their own life bars, so we can treat them like one giant life bar
-			return memory.read_s16_be(0x005CBC, "m68000 : ram : 0x100000-0x10FFFF") -- p1 team member 1 health
-			+ memory.read_s16_be(0x005CBE, "m68000 : ram : 0x100000-0x10FFFF") -- p1 team member 2 health
-			+ memory.read_s16_be(0x005CC0, "m68000 : ram : 0x100000-0x10FFFF") end, -- p1 team member 3 health
-		other_swaps=function() return false end,
-		grace=10,
+		func=function() return function()
+		
+			local gamestate = memory.read_u8(0x001075, "m68000 : ram : 0x100000-0x10FFFF") -- displays as 7 during gameplay, 8 during continue sequence
+			
+			-- the three team members have their own life bars
+			local p1_m1_health_changed, p1_m1_health_curr, p1_m1_health_prev = update_prev('p1_m1_health', memory.read_s16_be(0x005CBC, "m68000 : ram : 0x100000-0x10FFFF"))
+			local p1_m2_health_changed, p1_m2_health_curr, p1_m2_health_prev = update_prev('p1_m2_health', memory.read_s16_be(0x005CBE, "m68000 : ram : 0x100000-0x10FFFF"))
+			local p1_m3_health_changed, p1_m3_health_curr, p1_m3_health_prev = update_prev('p1_m3_health', memory.read_s16_be(0x005CC0, "m68000 : ram : 0x100000-0x10FFFF"))
+		
+			local activeplayer = memory.read_u8(0x0055BD, "m68000 : ram : 0x100000-0x10FFFF") -- first player = 0, second player = 2, third player = 3
+			
+			local timer_seconds_changed, timer_seconds_curr, timer_seconds_prev = update_prev('timer_seconds', memory.read_s8(0x0065AB, "m68000 : ram : 0x100000-0x10FFFF"))
+			local timer_milliseconds = memory.read_u8(0x0065AA, "m68000 : ram : 0x100000-0x10FFFF")
+			
+			local p1_coins_changed, p1_coins_curr, p1_coins_prev = update_prev('p1_coins', from_bcd(memory.read_u8(0x000034, "m68000 : ram : 0xD00000-0xD0FFFF")))
+			
+			if gamestate==7 then -- during gameplay
+				-- shuffle on active player damage until player's team is wiped out
+				if p1_m1_health_curr + p1_m2_health_curr + p1_m3_health_curr > -3 then -- a player is out at -1 health, so a fully ko'd team would be at -1*3
+					-- shuffle if the active player takes damage, ignoring damage to rest of the team
+					if activeplayer == 0 then
+						if p1_m1_health_changed and p1_m1_health_curr < p1_m1_health_prev then return true end
+					elseif activeplayer == 2 then
+						if p1_m2_health_changed and p1_m2_health_curr < p1_m2_health_prev then return true end
+					elseif activeplayer == 4 then
+						if p1_m3_health_changed and p1_m3_health_curr < p1_m3_health_prev then return true end
+					end
+				end	
+			elseif gamestate==8 then -- during continue sequence
+				-- shuffle on coin usage (loss)
+				if p1_coins_changed and p1_coins_curr == p1_coins_prev - 1 then return true end
+			end
+						
+			return false end
+		end,
+		grace=15,
+		grace_on_hit=true,
 	},
 	['CaptainNovolin']={ -- Captain Novolin SNES
 		func=singleplayer_withlives_swap,
