@@ -2646,7 +2646,7 @@ local gamedata = {
 	['SuperDodgeBall_ARC']={ -- Super Dodge Ball / Kunio no Nekketsu Toukyuu Densetsu (Arcade)
 		func=function() return function()
 		
-			local is_valid_gamestate = memory.read_u8(0x001075, "m68000 : ram : 0x100000-0x10FFFF")==7
+			local gamestate = memory.read_u8(0x001075, "m68000 : ram : 0x100000-0x10FFFF") -- displays as 7 during gameplay, 8 during continue sequence
 			
 			-- the three team members have their own life bars
 			local p1_m1_health_changed, p1_m1_health_curr, p1_m1_health_prev = update_prev('p1_m1_health', memory.read_s16_be(0x005CBC, "m68000 : ram : 0x100000-0x10FFFF"))
@@ -2658,36 +2658,29 @@ local gamedata = {
 			local timer_seconds_changed, timer_seconds_curr, timer_seconds_prev = update_prev('timer_seconds', memory.read_s8(0x0065AB, "m68000 : ram : 0x100000-0x10FFFF"))
 			local timer_milliseconds = memory.read_u8(0x0065AA, "m68000 : ram : 0x100000-0x10FFFF")
 			
-			if not is_valid_gamestate then return false end		
+			local p1_coins_changed, p1_coins_curr, p1_coins_prev = update_prev('p1_coins', from_bcd(memory.read_u8(0x000034, "m68000 : ram : 0xD00000-0xD0FFFF")))
 			
-			-- shuffle on active player damage until player's team is wiped out
-			if p1_m1_health_curr + p1_m2_health_curr + p1_m3_health_curr > -3 then -- a player is out at -1 health, so a fully ko'd team would be at -1*3
-				-- shuffle if the active player takes damage, ignoring damage to rest of the team
-				if activeplayer == 0 then
-					if p1_m1_health_changed and p1_m1_health_curr < p1_m1_health_prev then return true end
-				elseif activeplayer == 2 then
-					if p1_m2_health_changed and p1_m2_health_curr < p1_m2_health_prev then return true end
-				elseif activeplayer == 4 then
-					if p1_m3_health_changed and p1_m3_health_curr < p1_m3_health_prev then return true end
-				end
-			elseif p1_m1_health_changed or p1_m2_health_changed or p1_m3_health_changed then return true -- shuffle when team is wiped out regardless of who took damage
+			if gamestate==7 then -- during gameplay
+				-- shuffle on active player damage until player's team is wiped out
+				if p1_m1_health_curr + p1_m2_health_curr + p1_m3_health_curr > -3 then -- a player is out at -1 health, so a fully ko'd team would be at -1*3
+					-- shuffle if the active player takes damage, ignoring damage to rest of the team
+					if activeplayer == 0 then
+						if p1_m1_health_changed and p1_m1_health_curr < p1_m1_health_prev then return true end
+					elseif activeplayer == 2 then
+						if p1_m2_health_changed and p1_m2_health_curr < p1_m2_health_prev then return true end
+					elseif activeplayer == 4 then
+						if p1_m3_health_changed and p1_m3_health_curr < p1_m3_health_prev then return true end
+					end
+				end	
+			elseif gamestate==8 then -- during continue sequence
+				-- shuffle on coin usage (loss)
+				if p1_coins_changed and p1_coins_curr == p1_coins_prev - 1 then return true end
 			end
-				
-			-- shuffle if player loses by time out. time actually timer skips and goes to -1 on time out, then counts to -2 when loss is displayed
-			if timer_seconds_changed and timer_milliseconds == 0 and timer_seconds_curr == -1 and timer_seconds_prev == 1 then
-				-- shuffle if the player has health less than the opponent
-				local p2_m1_health = memory.read_s16_be(0x005CC4, "m68000 : ram : 0x100000-0x10FFFF")
-				local p2_m2_health = memory.read_s16_be(0x005CC6, "m68000 : ram : 0x100000-0x10FFFF")
-				local p2_m3_health = memory.read_s16_be(0x005CC8, "m68000 : ram : 0x100000-0x10FFFF")
-
-				-- delay so loss is displayed before shuffle
-				if (p1_m1_health_curr + p1_m2_health_curr + p1_m3_health_curr) < (p2_m1_health + p2_m2_health + p2_m3_health) then
-					return true, 280 end
-			end
-			
+						
 			return false end
 		end,
-		grace=10,
+		grace=15,
+		grace_on_hit=true,
 	},
 	['CaptainNovolin']={ -- Captain Novolin SNES
 		func=singleplayer_withlives_swap,
