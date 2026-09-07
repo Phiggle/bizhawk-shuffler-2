@@ -7733,6 +7733,7 @@ local gamedata = {
 		ActiveP2=function() return memory.read_u8(0x0047, "RAM") == 1 end, -- 1 means 2p mode
 		maxhp=function() return 60 end,
 		grace=60,
+		grace_on_hit=true, -- prevent grapples from causing repeated shuffles
 		delay=10,
 	},
 	['TMNT3_NES']={ -- Teenage Mutant Ninja Turtles III: The Manhattan Project (NES)
@@ -7751,6 +7752,7 @@ local gamedata = {
 		ActiveP2=function() return memory.read_u8(0x0028, "RAM") == 1 end, -- 1 means 2p mode
 		maxhp=function() return 127 end,
 		grace=60,
+		grace_on_hit=true, -- prevent grapples from causing repeated shuffles
 		delay=10,
 		swap_exceptions=function()
 			-- if both HP goes down and "doing a special/desperation move" is true, don't swap.
@@ -7776,6 +7778,7 @@ local gamedata = {
 		ActiveP2=function() return memory.read_u8(0x00A8, "WRAM") == 1 end, -- 1 means 2p mode
 		maxhp=function() return 96 end,
 		grace=60,
+		grace_on_hit=true, -- prevent grapples from causing repeated shuffles
 		delay=10,
 		swap_exceptions=function()
 		-- special moves cost HP if they hit, either during the special or on their finishing frame
