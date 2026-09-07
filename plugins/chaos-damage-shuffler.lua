@@ -6735,22 +6735,55 @@ local gamedata = {
 	},
 	['KirbyNightmareDreamland_GBA']={ -- Kirby - Nightmare in Dreamland, (GBA)
 		func=singleplayer_withlives_swap,
+		gmode=function()
+			-- Kirby: we are in active gameplay if we are on any of the screens below (0x23D8 IWRAM)
+			local valid_gamestates = {
+				[0x05] = true, -- on map
+				[0x08] = true, -- in a side-scrolling stage
+				[0x14] = true, -- Boss Endurance mode
+				[0x16] = true, -- Game Over
+			}
+			-- possible future swap support: 0x0E Quick Draw, 0x0F Bomb Rally, 0x10 Air Grind
+			-- Meta Knightmare: there is a timer running for this mode (and Boss Endurance too)
+			-- milliseconds for that timer: 0x6068 EWRAM
+			-- that timer needs to be running for us to swap in that mode, or we need to be on the game over screen
+			-- this prevents swaps on simply loading into the mode, as deaths are processed on the map screen
+			-- including a life being deducted on spawning into a map (solved for Kirby using an exception on title cards)
+			if (memory.read_u8(0x1F30, "IWRAM") == 1 -- character is Meta Knight
+				and update_prev("timer_running", memory.read_u8(0x6068, "EWRAM")) == false) -- timer is NOT running 
+				then return false
+			else
+				return valid_gamestates[memory.read_u8(0x23D8, "IWRAM")] -- on a valid screen
+			end 
+		end,
 		p1gethp=function() return memory.read_s8(0x5588, "EWRAM") end,
 		p1getlc=function() return memory.read_s8(0x7D48, "EWRAM") end,
-		maxhp=function() return 56 end,
+		p1getcc=function() 
+			if memory.read_u8(0x23D8, "IWRAM") == 0x16 -- game over screen
+				then return 0 -- if this screen appears, swap
+				else return 1
+			end
+		end,
+		maxhp=function() return memory.read_s8(0x5580, "EWRAM") end,
+		swap_exceptions=function()
+			local lives_changed=update_prev('lives', memory.read_s8(0x7D48, "EWRAM"))
+			if memory.read_u8(0x23D8, "IWRAM") == 0x14 and lives_changed then return true end
+		-- turn off shuffling for lives when you start Boss Endurance mode
+		-- you only get one life there, so the lives counter dropping on starting should be ignored
+		-- you will still shuffle on reaching the Game Over screen
+			local title_card_changed = update_prev("title_card", memory.read_u8(0xAF04, "EWRAM"))
+			if title_card_changed then return true end
+		-- Kirby: on loading a save, when the title card for the chapter disappears, you "spend" a life and go to max HP
+		-- so don't shuffle whenever the title card transitions
+		-- it sure looks like 0xAF04 only toggles up to 1 during a title card cutscene and is 0 otherwise!
+			return false
+		end,
 		CanHaveInfiniteLives=true,
 		p1livesaddr=function() return 0x7D48 end,
 		LivesWhichRAM=function() return "EWRAM" end,
 		maxlives=function() return 69 end,
-		ActiveP1=function() return true end, -- p1 is always active!
-		-- on loading a save, when the title card for the chapter disappears, you "spend" a life and go to max HP
-		-- so don't shuffle whenever the title card transitions
-		-- it sure looks like 0xAF04 only toggles up to 1 during a title card cutscene and is 0 otherwise!
-		swap_exceptions=function() 
-			local title_card_changed = update_prev("title_card", memory.read_u8(0xAF04, "EWRAM"))
-			if title_card_changed then return true end
-			return false
-		end,
+		ActiveP1=function() return memory.read_u8(0x23D8, "IWRAM") ~= 0x14 end,
+		-- turns off infinite lives if you're in Boss Endurance mode
 	},
 	['KirbyCrystalShards_N64'] = { -- Kirby 64: The Crystal Shards, N64
 		func = singleplayer_withlives_swap,
