@@ -3528,18 +3528,25 @@ local gamedata = {
 			-- countdown, active race, or crashed
 			return substate == 3 or substate == 5 or substate == 10
 		end,
-		p1gethp = function() return memory.read_s16_le(0x12DEA, "EWRAM") end,
+		p1gethp = function()
+			local offset = memory.read_u8(0x131CF, "EWRAM") * 0xCC
+			return memory.read_s16_le(0x12DEA + offset, "EWRAM")
+		end,
 		p1getlc = function() return 1 end, -- only swap on health loss
 		-- don't swap if vehicle selection forces a health change
-		gettogglecheck = function() return memory.read_u8(0x12E16, "EWRAM") end,
+		gettogglecheck = function()
+			local offset = memory.read_u8(0x131CF, "EWRAM") * 0xCC
+			return memory.read_u8(0x12E16 + offset, "EWRAM")
+		end,
 		-- different per vehicle, but this seems like the max value
 		maxhp = function() return 16320 end, -- 255*64
 		minhp = -1, -- swap on 0 health as well
 		swap_exceptions = function()
+			local offset = memory.read_u8(0x131CF, "EWRAM") * 0xCC
 			-- if health remains, exempt grazing walls without hitting them
-			return memory.read_s16_le(0x12DEA, "EWRAM") > 0
-				and memory.read_u8(0x12E1F, "EWRAM") == 1
-				and memory.read_u8(0x12E20, "EWRAM") ~= 0
+			return memory.read_s16_le(0x12DEA + offset, "EWRAM") > 0
+				and memory.read_u8(0x12E1F + offset, "EWRAM") == 1
+				and memory.read_u8(0x12E20 + offset, "EWRAM") ~= 0
 		end,
 		delay = 30,
 		grace = 120,
@@ -3559,10 +3566,16 @@ local gamedata = {
 		-- 0x0BFD IWRAM is used here only with 0x0BFA = 1 as stale values can persist
 		--   this is more of a 'gamemode' - used to filter out demo mode and ghost replays (3 and 7)
 		--   as otherwise they will produce the same gamestate values (and can take damage)
+		-- the following addresses are for index #0, see note for 0x131CF
 		-- 0x12DF0 EWRAM is the timer for failing a boost start
 		-- 0x12DF4 EWRAM is the 'ui scale' health (0-64)
 		-- 0x12E16 EWRAM is the player machine id, proxy for max health changes
 		-- 0x12E1F EWRAM is the current 'terrain type' id
+		-- these addresses are machine independent:
+		-- 0x131CF EWRAM is the player machine index
+		--   for gp mode in this game, you aren't always machine #0
+		--   data for other machines comes afterwards with offset addresses
+		--   the machine data size is 0xCC (204) bytes and so an (index * size) offset is needed
 		-- demo mode is actually a good tutorial with input overlays ([select] on title to force)
 	},
 	['FZeroGPLegend_GBA'] = { -- F-Zero: GP Legend, GBA
