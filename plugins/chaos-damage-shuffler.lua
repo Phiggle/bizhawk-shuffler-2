@@ -6273,7 +6273,7 @@ local gamedata = {
 			end
 		end,
 		CanHaveInfiniteLives=true,
-		swap_exceptions=function() return memory.read_u8(0xF4, "WRAM") == 0 end,
+		swap_exceptions=function() return memory.read_s16_le(0xF4, "WRAM") == 0 end, -- Has no effect in Arcade Edition/Nintendo Super System, however
 		p1livesaddr=function() return 0x1C end,
 		LivesWhichRAM=function() return "WRAM" end,
 		maxlives=function() return 0x03 end, -- 4 on screen will tell you it's working without counting down 69+ lives on level clear
