@@ -94,7 +94,7 @@ plugin.description =
 	-Metroid (NES), 1p
 	-Metroid II (GB or GBC color patch), 1p
 	-Super Metroid (SNES) - 1p, US/JP version
-	-Metroid Fusion (GBA), 1p
+	-Metroid Fusion (GBA), 1p - supports Redux (7-2026) hack
 	-Metroid Zero Mission (GBA), 1p
 
 	ZELDA BLOCK
@@ -2447,6 +2447,39 @@ local function PockyRocky2_SNES_swap(gamemeta)
 	end
 end
 
+local function metroid_fusion_offset(gamemeta)
+	return iframe_health_swap({
+		-- needed for support for Metroid Fusion Redux, which does offset several addresses
+		-- function assumes that area and room ID are unaffected by these offsets
+		-- affected includes gamestate, HP, iframes addresses
+		-- metadata should pass the offset here (0 if not applicable)
+		is_valid_gamestate=function()
+			return memory.read_u8(0x0BDE + gamemeta.offset, "IWRAM") == 1
+				-- don't shuffle on omega metroid forced hit
+				and not (memory.read_u8(0x002C, "IWRAM") == 0 -- area id: main deck
+					and memory.read_u8(0x002D, "IWRAM") == 63 -- room id: omega metroid room
+					and memory.read_u16_le(0x1310 + gamemeta.offset, "IWRAM") == 1 -- hp: omega metroid forced hit takes hp to 1
+					and memory.read_u8(0x1249 + gamemeta.offset, "IWRAM") == 48) -- iframes: you should still shuffle from time up while at 1 hp
+		end,
+		get_iframes=function() return memory.read_u8(0x1249 + gamemeta.offset, "IWRAM") end,
+		get_health=function() return memory.read_u16_le(0x1310 + gamemeta.offset, "IWRAM") end,
+		iframe_minimum=function() return 30 end,
+		-- SRX amoebas, TRO leech boss, TRO plant boss flowers, electric water
+		-- all do damage with short iframes (4) rather than skipping iframes entirely like lava/heat
+		-- Ridley's grab does this too, repeatedly popping up to 29 iframes on hitting 0
+		-- normal damage for shuffing triggers 48 iframes
+		-- in other words, requiring iframes >=30 to swap should be fine here
+		other_swaps=function()
+			-- check if we ran out of time (sector 3, secret lab, ending)
+			local time_up_changed, time_up_curr, _ = update_prev('time up', memory.read_u8(0x08D7 + gamemeta.offset, "IWRAM") == 2)
+			-- 0: no timer, 1: timer on, 2: timer just ran out
+			return time_up_changed and time_up_curr, 65
+			-- add extra delay so you get the whiteout animation before shuffling
+		end,
+		grace=60,
+	})
+end
+
 local function always_swap(gamemeta)
 	return function(data)
 		return true -- Always swap!
@@ -4008,31 +4041,12 @@ local gamedata = {
 		grace=60,
 	},
 	['MetroidFusion']={ -- Metroid Fusion, GBA
-		func=iframe_health_swap,
-		is_valid_gamestate=function()
-			return memory.read_u8(0x0BDE, "IWRAM") == 1
-				-- don't shuffle on omega metroid forced hit
-				and not (memory.read_u8(0x002C, "IWRAM") == 0 -- area id: main deck
-					and memory.read_u8(0x002D, "IWRAM") == 63 -- room id: omega metroid room
-					and memory.read_u16_le(0x1310, "IWRAM") == 1 -- hp: omega metroid forced hit takes hp to 1
-					and memory.read_u8(0x1249, "IWRAM") == 48) -- iframes: you should still shuffle from time up while at 1 hp
-		end,
-		get_iframes=function() return memory.read_u8(0x1249, "IWRAM") end,
-		get_health=function() return memory.read_u16_le(0x1310, "IWRAM") end,
-		iframe_minimum=function() return 30 end,
-		-- SRX amoebas, TRO leech boss, TRO plant boss flowers, electric water
-		-- all do damage with short iframes (4) rather than skipping iframes entirely like lava/heat
-		-- Ridley's grab does this too, repeatedly popping up to 29 iframes on hitting 0
-		-- normal damage for shuffing triggers 48 iframes
-		-- in other words, requiring iframes >=30 to swap should be fine here
-		other_swaps=function()
-			-- check if we ran out of time (sector 3, secret lab, ending)
-			local time_up_changed, time_up_curr, _ = update_prev('time up', memory.read_u8(0x08D7, "IWRAM") == 2)
-			-- 0: no timer, 1: timer on, 2: timer just ran out
-			return time_up_changed and time_up_curr, 65
-			-- add extra delay so you get the whiteout animation before shuffling
-		end,
-		grace=60,
+		func=metroid_fusion_offset,
+		offset = 0, -- default version of the game
+	},
+	['MetroidFusionRedux']={ -- Metroid Fusion, GBA - Redux QoL hack (7-2026)
+		func=metroid_fusion_offset,
+		offset = 0x0034,
 	},
 	['MetroidZero']={ -- Metroid Zero Mission, GBA
 		func=iframe_health_swap,
