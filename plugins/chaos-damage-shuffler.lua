@@ -7829,45 +7829,22 @@ local gamedata = {
 		end,
 	},
 	['EdwardRandy_ARC']={ -- The Cliffhanger - Edward Randy (World ver 3)
-		func=function() return function(data)
-				local gmode = memory.read_u8(0x0000, "m68000 : ram : 0x194000-0x197FFF")==1
-		
-				-- score doubles as health, and is drained for several frames on damage, so we'll only shuffle when health stops falling to avoid constant shuffle
-				if data.isHealthFalling == nil then data.isHealthFalling = false end -- set a starting value of false, but do not overwrite a true value
-								
+		func=health_swap,
+		is_valid_gamestate=function() return memory.read_u8(0x0000, "m68000 : ram : 0x194000-0x197FFF")==1 end,
+		get_health=function()
 				-- health (score) is stored as hex over three values each representing two digits, so need to be both converted and combined into a single value
-				local healthHexUnits = memory.read_u8(0x1533, "m68000 : ram : 0x194000-0x197FFF")
-				local healthHexHundreds = memory.read_u8(0x1532, "m68000 : ram : 0x194000-0x197FFF")
-				local healthHexTenThousands = memory.read_u8(0x1531, "m68000 : ram : 0x194000-0x197FFF")
-				
-				-- Get upper nybble, bit-shift right 4 bits
-				local tens = (healthHexUnits & 0xF0)>>4
-				local thousands = (healthHexHundreds & 0xF0)>>4
-				local hundredtens = (healthHexTenThousands & 0xF0)>>4
-				
-				-- Just the lower nybble
-				local ones = healthHexUnits & 0x0F
-				local hundreds = healthHexHundreds & 0x0F
-				local tenthousands = healthHexTenThousands & 0x0F
-				
-				-- Merge 'em
-				local _, health_curr, health_prev = update_prev('health',
-					ones + (10 * tens) + (100 * hundreds) + (1000 * thousands) + (10000 * tenthousands) + (100000 * hundredtens))
-								
-				-- when health is not falling, wait until it is. when health is failing, wait until it stops, then swap.
-				if gmode and health_prev ~= nil then
-					if not data.isHealthFalling then 
-						data.isHealthFalling = health_curr < health_prev
-					elseif health_curr >= health_prev then
-						return true end
-					end
-				return false end
+				local healthUnits = from_bcd(memory.read_u8(0x1533, "m68000 : ram : 0x194000-0x197FFF")) 
+				local healthHundreds = from_bcd(memory.read_u8(0x1532, "m68000 : ram : 0x194000-0x197FFF"))
+				local healthTenThousands = from_bcd(memory.read_u8(0x1531, "m68000 : ram : 0x194000-0x197FFF"))
+				return healthUnits + (100 * healthHundreds) + (10000 * healthTenThousands)
 			end,
+		other_swaps=function() return false end,
 		CanHaveInfiniteLives=true,
 		p1livesaddr=function() return 0x000C end, -- credits provided
 		LivesWhichRAM=function() return "m68000 : ram : 0x194000-0x197FFF" end,
 		maxlives=function() return 0x69 end,
 		ActiveP1=function() return true end, -- p1 is always active!
+		grace_on_hit=true,
 	},
 	['TaleSpin_NES']={ -- TaleSpin, NES
 		func=singleplayer_withlives_swap,
