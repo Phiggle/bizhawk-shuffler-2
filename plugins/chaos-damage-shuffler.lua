@@ -254,6 +254,7 @@ plugin.description =
 	-Lion King, The (bootleg) (NES), 1p
 	-Lion King, The (SNES), 1p
 	-Lion King 2 (bootleg) (Genesis/Mega Drive), 1p
+	-Mad Gear (Arcade), 1p
 	-Magical Kid's Doropie / Krion Conquest (NES), 1p
 	-Majuu Ou (Japan) / King of Demons (SNES), 1p
 	-Makai Mura for WonderSwan (WS), 1p
@@ -6907,6 +6908,18 @@ local gamedata = {
 		ActiveP1=function() return true end, -- p1 is always active!
 		grace=50,
 	},
+	['MadGear_ARC']={ -- Mad Gear (US)
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return 255 - memory.read_u8(0x008824, "m68000 : ram : 0xFF0000-0xFFFFFF") end, -- value measures count of crashes
+		p1getlc=function() return memory.read_u8(0x0087E3, "m68000 : ram : 0xFF0000-0xFFFFFF") end,
+		maxhp=function() return 255 end,
+		gmode=function() return memory.read_u8(0x000943, "m68000 : ram : 0xFF0000-0xFFFFFF") == 48 end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x0087E3 end,
+		LivesWhichRAM=function() return "m68000 : ram : 0xFF0000-0xFFFFFF" end,
+		maxlives=function() return 9 end, -- values are stored as multiples of 4; max of 9 continues is 9*4=36
+		ActiveP1=function() return true end, -- p1 is always active!
+	},	
 	['BubbleBobble_NES']={ -- Bubble Bobble, NES
 		func=singleplayer_withlives_swap,
 		p1gethp=function() return 1 end ,
