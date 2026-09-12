@@ -130,6 +130,7 @@ plugin.description =
 	KIRBY BLOCK
 	-Kirby's Dream Land (GB), 1p - also supports DX version 1.3
 	-Kirby's Dream Land 2 (GB), 1p - also supports DX version 1.2
+	-Kirby's Dream Land 3 (SNES), 1-2p
 	-Kirby's Adventure (NES), 1p
 	-Kirby: Super Star (SNES), 1p
 	-Kirby: Nightmare in Dream Land (GBA), 1p
@@ -6747,6 +6748,52 @@ local gamedata = {
 		-- 0x82 CartRAM holds a status value: normally 0, 2 on death, (4 paused etc)
 		-- 0x1EFF WRAM holds the id for demos (1-3), 0 for regular gameplay
 		-- you only have one life for the boss rush, regardless of life count
+	},
+	['KirbyDreamland3_SNES'] = { -- Kirby's Dream Land 3, SNES
+		func = twoplayers_withlives_swap,
+		gmode = function()
+			return memory.read_s16_le(0x0022, "CARTRAM") == 2 -- in game
+				and memory.read_u8(0x5F24, "CARTRAM") == 0 -- not a demo
+		end,
+		p1gethp = function() return memory.read_u8(0x39D1, "CARTRAM") end, -- kirby
+		p1getlc = function() return memory.read_u8(0x39CF, "CARTRAM") end,
+		p2gethp = function() -- gooey
+			if memory.read_s16_le(0x5543, "CARTRAM") ~= 128 then return 0 end
+			return memory.read_u8(0x39D3, "CARTRAM") + 1 -- only if p2 controls
+		end,
+		p2getlc = function() return 1 end, -- no life count for p2
+		maxhp = function() return 10 end,
+		swap_exceptions = function()
+			-- exempt kirby hp sacrifice to summon gooey
+			local _, gooey_hp, prev_hp = update_prev('gooey_hp', memory.read_u8(0x39D3, "CARTRAM"))
+			if prev_hp == 0 and gooey_hp > prev_hp then return true end
+			-- exempt gooey self-destruct
+			local timer = memory.read_u8(0x5545, "CARTRAM")
+			local countdown = memory.read_u8(0x5547, "CARTRAM")
+			return update_prev('countdown', countdown) and countdown == 0 and timer > 0
+		end,
+		-- Infinite* Lives section
+		CanHaveInfiniteLives = true,
+		p1livesaddr = function() return 0x39CF end,
+		LivesWhichRAM = function() return "CARTRAM" end,
+		maxlives = function() return 70 end,
+		ActiveP1 = function() return true end,
+		-- OTHER NOTES:
+		-- lose 2 health to summon gooey, incl. max health (10 -> 8)
+		--   health loss capped at 1hp, can still summon
+		-- if gooey is controlled by p2, 0x5543 CARTRAM is set to 128
+		--   for cpu gooey, this remains 0 (256 in 2p demo, -1 prevents summoning)
+		-- animals share player health this time
+		--   p1 animal id (0-5) is at 0x5557 CARTRAM, -1 for none
+		-- current p1 ability (1-8) is at 0x54A9 CARTRAM, 0 for none, (9 special)
+		--   for testing, id changes will be applied if you 'regrab' the ability
+		-- you only have one life for the boss rush, regardless of life count
+		--   in this game, a life is still deducted on failure
+		-- for self-destructing gooey:
+		--   pressing the button initially starts a countdown (from 7) and a (24-frame) timer
+		--   button presses before the timer expires advance the countdown and reset the timer
+		--   gooey self-destructs when the countdown hits 0 if the timer is still active
+		--   if the timer expires, the next button press will instead restart the process
 	},
 	['KirbyMirror_GBA']={ -- Kirby and the Amazing Mirror, (GBA)
 		func=singleplayer_withlives_swap,
