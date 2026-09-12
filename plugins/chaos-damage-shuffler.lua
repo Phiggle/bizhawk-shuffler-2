@@ -294,6 +294,7 @@ plugin.description =
 	-Pictionary (NES)
 	-Pocky & Rocky (SNES), 1-2p
 	-Pocky & Rocky 2 (SNES), 1-2p
+	-Pocky & Rocky with Becky (GBA), 1p
 	-Power Blade (NES), 1p
 	-Power Blade 2 (NES), 1p
 	-Powerslave/Exhumed, Saturn
@@ -7144,6 +7145,28 @@ local gamedata = {
 		maxlives=function() return 4 end,
 		ActiveP1=function() return true end, -- p1 is always active! p2 doesn't need lives so don't specify anything for them!
 		grace=50,
+	},
+	['PockyRockyBecky_GBA'] = { -- Pocky & Rocky with Becky, GBA
+		func = singleplayer_withlives_swap,
+		gmode = function()
+			local state = memory.read_u8(0x0021, "IWRAM")
+			return state == 4 or state == 17 or state == 18
+		end,
+		-- health drops to -1 from damage, -2 from instakills
+		p1gethp = function() return math.max(memory.read_s8(0x1F46, "IWRAM"), -1) end,
+		p1getlc = function() return memory.read_s8(0x1F44, "IWRAM") end,
+		maxhp = function() return 1 end, -- 2 hits
+		minhp = -1,
+		-- Infinite* Lives section
+		CanHaveInfiniteLives = true,
+		p1livesaddr = function() return 0x1F44 end,
+		LivesWhichRAM = function() return "IWRAM" end,
+		maxlives = function() return 9 end,
+		-- any point past the title screen
+		ActiveP1 = function() return memory.read_u8(0x0021, "IWRAM") > 3 end,
+		-- OTHER NOTES:
+		-- gamestate is 0x0021 IWRAM: 4 stage, 17 boss, 18 death
+		-- iframes are at 0x3890 IWRAM, 112 on hit, none on death (u16, temp invuln gives lots)
 	},
 	['RainbowIslands_NES']={ -- Rainbow Islands - The Story of Bubble Bobble 2, NES
 		func=singleplayer_withlives_swap,
