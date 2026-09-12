@@ -7828,7 +7828,7 @@ local gamedata = {
 		return false
 		end,
 	},
-	['EdwardRandy_ARC']={ -- The Cliffhanger - Edward Randy (World ver 3)
+	['EdwardRandy_ARC']={ -- The Cliffhanger - Edward Randy
 		func=health_swap,
 		is_valid_gamestate=function() return memory.read_u8(0x0000, "m68000 : ram : 0x194000-0x197FFF")==1 end,
 		get_health=function()
