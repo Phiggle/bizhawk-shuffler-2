@@ -7829,22 +7829,18 @@ local gamedata = {
 		end,
 	},
 	['EdwardRandy_ARC']={ -- The Cliffhanger - Edward Randy
-		func=health_swap,
-		is_valid_gamestate=function() return memory.read_u8(0x0000, "m68000 : ram : 0x194000-0x197FFF")==1 end,
-		get_health=function()
-				-- health (score) is stored as hex over three values each representing two digits, so need to be both converted and combined into a single value
-				local healthUnits = from_bcd(memory.read_u8(0x1533, "m68000 : ram : 0x194000-0x197FFF")) 
-				local healthHundreds = from_bcd(memory.read_u8(0x1532, "m68000 : ram : 0x194000-0x197FFF"))
-				local healthTenThousands = from_bcd(memory.read_u8(0x1531, "m68000 : ram : 0x194000-0x197FFF"))
-				return healthUnits + (100 * healthHundreds) + (10000 * healthTenThousands)
-			end,
-		other_swaps=function() return false end,
+		func=singleplayer_withlives_swap,
+		gmode=function() return memory.read_u8(0x0000, "m68000 : ram : 0x194000-0x197FFF")==1 end,
+		p1gethp=function() return from_bcd(memory.read_u24_be(0x1531, "m68000 : ram : 0x194000-0x197FFF")) end,
+		p1getlc=function() return 1 end,
+		maxhp=function() return 999999 end,
+		minhp=-1,
+		delay=10, -- health/score drains continually when damaged, delay shuffle until health stops falling
 		CanHaveInfiniteLives=true,
 		p1livesaddr=function() return 0x000C end, -- credits provided
 		LivesWhichRAM=function() return "m68000 : ram : 0x194000-0x197FFF" end,
 		maxlives=function() return 0x69 end,
 		ActiveP1=function() return true end, -- p1 is always active!
-		grace_on_hit=true,
 	},
 	['TaleSpin_NES']={ -- TaleSpin, NES
 		func=singleplayer_withlives_swap,
