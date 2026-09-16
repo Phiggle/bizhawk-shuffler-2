@@ -10091,6 +10091,15 @@ local gamedata = {
 		maxlives=function() return 69 end,
 		ActiveP1=function() return true end, -- p1 is always active!
 	},
+	['SoulBlazer_SNES']={ -- Soul Blazer, SNES 
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x1B88, "WRAM") end,
+		p1getlc=function() return 0 end,
+		maxhp=function() return memory.read_u8(0x1b8a, "WRAM") end,
+		minhp=-1,
+		grace=30,
+		grace_on_hit=true,
+	},
 }
 
 local backupchecks = {
