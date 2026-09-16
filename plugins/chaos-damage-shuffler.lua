@@ -322,6 +322,7 @@ plugin.description =
 	-Skyblazer (SNES), 1p
 	-Snake Rattle 'n Roll (NES), 1p
 	-Solomon no Kagi (Arcade), 1p
+	-Soul Blazer (SNES), 1p
 	-Sonic Jam 6 (bootleg) (Genesis/Mega Drive), 1p
 	-Sparkster (SNES), 1p
 	-Spider-Man & Venom - Maximum Carnage (SNES), 1p
