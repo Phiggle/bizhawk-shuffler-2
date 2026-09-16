@@ -8178,6 +8178,7 @@ local gamedata = {
 		p1livesaddr=function() return 0x1298 end,
 		LivesWhichRAM=function() return "Main RAM" end,
 		maxlives=function() return 69 end, -- The HUD stops counting at 9; the code itself does not
+		ActiveP1=function() return true end, -- p1 is always active!
 	},
 	['SonicAdvance1_GBA']={ -- Sonic Advance (GBA)
 		func=sonic_swap,
