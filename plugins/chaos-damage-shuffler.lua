@@ -2477,7 +2477,6 @@ local function metroid_fusion_offset(gamemeta)
 			return time_up_changed and time_up_curr, 65
 			-- add extra delay so you get the whiteout animation before shuffling
 		end,
-		grace=60,
 	})
 end
 
@@ -4044,10 +4043,12 @@ local gamedata = {
 	['MetroidFusion']={ -- Metroid Fusion, GBA
 		func=metroid_fusion_offset,
 		offset = 0, -- default version of the game
+		grace=60,
 	},
 	['MetroidFusionRedux']={ -- Metroid Fusion, GBA - Redux QoL hack (7-2026)
 		func=metroid_fusion_offset,
 		offset = 0x0034,
+		grace=60,
 	},
 	['MetroidZero']={ -- Metroid Zero Mission, GBA
 		func=iframe_health_swap,
