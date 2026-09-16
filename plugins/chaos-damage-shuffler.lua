@@ -10120,7 +10120,9 @@ local gamedata = {
 		p1getlc=function() return 0 end,
 		maxhp=function() return memory.read_u8(0x1b8a, "WRAM") end,
 		minhp=-1,
-		grace=30,
+		grace=32,
+		-- iframes address: 0x0826 WRAM (signed 8-bit)
+		-- goes to -31 on hit and counts up by 1 per frame until reaching 0
 		grace_on_hit=true,
 	},
 }
