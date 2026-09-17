@@ -9797,18 +9797,20 @@ local gamedata = {
 	['MajuuOu_SNES']={ -- Majuu Ou (Japan) / King of Demons
 		func=singleplayer_withlives_swap,
 		p1gethp=function() return memory.read_u8(0x00009F, "WRAM") end,
-		p1getlc=function() return memory.read_u8(0x0000A3, "WRAM") end,
+		p1getlc=function() return from_bcd(memory.read_u8(0x0000A3, "WRAM")) end,
 		maxhp=function() return 112 end,
-		gmode=function() return memory.read_u8(0x000209, "WRAM") == 0 end, -- might be not equal to 20?
+		gmode=function() return memory.read_u8(0x000209, "WRAM") == 0  -- might be not equal to 20?
+			and memory.read_u8(0x000048, "WRAM") == 15 end, -- check if screen is transitioning; wife status momentarily switches to off during screen transitions
+		delay=30, -- prevent rapid shuffling when grabbed by spider or centipede bosses
 		CanHaveInfiniteLives=true,
 		p1livesaddr=function() return 0x0000A3 end,
 		LivesWhichRAM=function() return "WRAM" end,
-		maxlives=function() return 9 end,
+		maxlives=function() return 0x69 end,
 		ActiveP1=function() return true end, -- p1 is always active!
 		other_swaps=function()
-		-- if the player has his wife (the fairy), she revives him on death, so she's expended instead of a life. goes from 0 when disabled to 19 when enabled
-		local wife_changed, wife_cur, wife_prev = update_prev('wife', memory.read_u8(0x0006A7, "WRAM"))
-		return (wife_changed and wife_cur == 0 and wife_prev == 19) end,
+			-- if the player has his wife (the fairy), she revives him on death, so she's expended instead of a life. goes from 0 when disabled to 19 when enabled
+			local wife_changed, wife_cur, wife_prev = update_prev('wife', memory.read_u8(0x0006A7, "WRAM"))
+			return (wife_changed and wife_cur == 0 and wife_prev == 19) end,
 	},	
 	['GundamRainbow_ARC']={ -- SD Gundam Sangokushi Rainbow Tairiku Senki (Japan), arcade
 		func=singleplayer_withlives_swap,
