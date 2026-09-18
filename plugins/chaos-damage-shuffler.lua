@@ -2513,6 +2513,11 @@ local gamedata = {
 				on_frame = true,
 			},
 		},
+		levels = {
+			min = 1, max = 13,
+			names = bt_nes_level_names,
+			apply = function(leveldata, level) end, -- TODO
+		},
 	},
 	['BT_NES_patched']={ -- Battletoads NES with bugfix patch
 		func=twoplayers_withlives_swap,
@@ -2522,6 +2527,11 @@ local gamedata = {
 		p2getlc=function() return memory.read_u8(0x0012, "RAM") end,
 		gettogglecheck=function() return memory.read_u8(0x0011, "RAM") == 255 or memory.read_u8(0x0011, "RAM") == 255 end, --did a toad just join or drop?
 		maxhp=function() return 6 end,
+		levels = {
+			min = 1, max = 13,
+			names = bt_nes_level_names,
+			apply = function(leveldata, level) end, -- TODO
+		},
 	},
 	['BTDD_NES']={ -- Battletoads Double Dragon NES
 		func=twoplayers_withlives_swap,
@@ -2537,6 +2547,11 @@ local gamedata = {
 		ActiveP1=function() return memory.read_u8(0x0011, "RAM") > 0 and memory.read_u8(0x0011, "RAM") < 255 end,
 		ActiveP2=function() return memory.read_u8(0x0012, "RAM") > 0 and memory.read_u8(0x0012, "RAM") < 255 end,
 		LivesWhichRAM=function() return "RAM" end,
+		levels = {
+			min = 1, max = 14,
+			names = btdd_level_names,
+			apply = function(leveldata, level) end, -- TODO
+		},
 	},
 	['BT_SNES']={ -- Battletoads in Battlemaniacs for SNES
 		func=twoplayers_withlives_swap,
@@ -2574,6 +2589,13 @@ local gamedata = {
 			return false
 		end,
 		-- note, BT_SNES currently uses a custom Infinite Lives function to allow for level skips to work
+		levels = {
+			min = 1, max = 8,
+			names = bt_snes_level_names,
+			order = bt_snes_level_recoder,
+			apply = function(leveldata, level) end, -- TODO
+		},
+		settings = {'BTSNESRash'},
 	},
 	['BTDD_SNES']={ -- Battletoads Double Dragon SNES
 		func=twoplayers_withlives_swap,
@@ -2590,6 +2612,11 @@ local gamedata = {
 		ActiveP1=function() return memory.read_u8(0x000026, "WRAM") > 0 and memory.read_u8(0x000026, "WRAM") < 255 end,
 		ActiveP2=function() return memory.read_u8(0x000028, "WRAM") > 0 and memory.read_u8(0x000028, "WRAM") < 255 end,
 		LivesWhichRAM=function() return "WRAM" end,
+		levels = {
+			min = 1, max = 14,
+			names = btdd_level_names,
+			apply = function(leveldata, level) end, -- TODO
+		},
 	},
 	['BTDD_SNES_patched']={ -- Battletoads Double Dragon SNES
 		func=twoplayers_withlives_swap,
@@ -2605,6 +2632,11 @@ local gamedata = {
 		ActiveP1=function() return memory.read_u8(0x000026, "WRAM") > 0 and memory.read_u8(0x000026, "WRAM") < 255 end,
 		ActiveP2=function() return memory.read_u8(0x000028, "WRAM") > 0 and memory.read_u8(0x000028, "WRAM") < 255 end,
 		LivesWhichRAM=function() return "WRAM" end,
+		levels = {
+			min = 1, max = 14,
+			names = btdd_level_names,
+			apply = function(leveldata, level) end, -- TODO
+		},
 	},
 	['CNDRR1_NES']={ -- Chip and Dale 1 (NES)
 		func=twoplayers_withlives_swap,
@@ -10186,6 +10218,8 @@ local function apply_cheats(cheats, settings, on_frame)
 end
 
 function plugin.on_game_load(data, settings)
+	
+	gamemeta = nil
 	prevdata = {}
 	debug_timer = 0
 	last_hit = 0
@@ -10197,52 +10231,6 @@ function plugin.on_game_load(data, settings)
 	
 	tag = tags[gameinfo.getromhash()] or get_game_tag()
 	tags[gameinfo.getromhash()] = tag or NO_MATCH
-	
-	---------------
-	-- For Battletoads games to do level skip/select based on filename
-	----
-
-	-- Which level to patch into on game load?
-	-- Grab the first two characters of the filename, turned into a number.
-	local which_level_filename = string.sub((tostring(config.current_game)),1,2)
-	local which_level = which_level_filename
-
-	-- if file name starts with a number outside of the expected range, reset the level to 1
-	-- TODO: recode to accommodate different min and max levels (Battletoads SNES requires 00-08)
-	-- consider moving function elsewhere if needed
-
-	if type(tonumber(which_level)) == "number" then
-		which_level = tonumber(which_level)
-		-- BT_NES
-		if tag == "BT_NES" or tag == "BT_NES_patched" then
-			if which_level >13 or which_level <1 or which_level == nil then
-				which_level = 1
-			end
-		end
-		-- BT_SNES
-		if tag == "BT_SNES" then
-			if which_level >8 or which_level <1 then
-				which_level = 1
-			end
-		end
-		-- BTDD (both)
-		if tag == "BTDD_NES"
-			or tag == "BTDD_SNES"
-			or tag == "BTDD_SNES_patched"
-		then
-			if which_level >14 or which_level <1 then
-				which_level = 1
-			end
-		end
-	else
-		which_level = 1
-	end
-
-	-- ONLY APPLY THESE TO RECOGNIZED GAMES
-	-- ONLY APPLY THESE TO RECOGNIZED GAMES
-	-- ONLY APPLY THESE TO RECOGNIZED GAMES
-	
-	-- TODO: set min and max level variable by game
 	
 	-- BATTLETOADS NES
 	if tag == "BT_NES" or tag == "BT_NES_patched" then
@@ -10322,11 +10310,18 @@ function plugin.on_game_load(data, settings)
 
 	-- first time through with a bad match, tag will be nil
 	-- can use this to print a debug message only the first time
+	if tag == nil and not settings.SuppressLog then
+		log_console('Chaos Shuffler: unrecognized - do you have chaos-shuffler-hashes.dat? %s (%s)',
+			gameinfo.getromname(), gameinfo.getromhash()
+		)
+	end
 	
 	if tag ~= nil and tag ~= NO_MATCH then
+		
 		gamemeta = gamedata[tag]
-		local func = gamemeta.func
-		shouldSwap = func(gamemeta)
+		shouldSwap = gamemeta:func()
+		
+		log_console('Chaos Shuffler: recognized as %s', tag)
 		
 		if gamemeta.settings then
 			for _, name in ipairs(gamemeta.settings) do
@@ -10391,41 +10386,23 @@ function plugin.on_game_load(data, settings)
 				end
 			end
 		end
-	else
-		gamemeta = nil
-	end
-
-	-- log stuff
-	if tag == "BT_NES" or tag == "BT_NES_patched" then
-		if tonumber(which_level_filename) == nil or which_level ~= tonumber(which_level_filename) then
-			if settings.SuppressLog ~= true and (which_level > 13 or which_level == 1) then
-				log_console(string.format('Battletoads (NES) - no level specified (' .. string.format(tag) .. ')'))
+		
+		-- For games to do level skip/select based on filename
+		if gamemeta.levels then
+			
+			-- Which level to patch into on game load?
+			-- Grab the first two characters of the filename, turned into a number.
+			local level_filename = tonumber(string.sub(config.current_game, 1, 2))
+			-- if file name starts with a number outside of the expected range, reset the level to 1
+			local level = value_in_range(level_filename, gamemeta.levels.min, gamemeta.levels.max, 1)
+			
+			if level == level_filename then
+				local level_name = gamemeta.levels.names and gamemeta.levels.names[level] or '?'
+				log_console('Chaos Shuffler/%s: level %d (%s)', tag, level, level_name)
+			elseif not settings.SuppressLog then
+				log_console('Chaos Shuffler/%s: no level specified', tag)
 			end
-		else
-			log_console('Battletoads (NES) Level ' .. tostring(which_level) .. ': ' ..  bt_nes_level_names[which_level])
 		end
-	elseif tag == "BTDD_NES" or tag == "BTDD_SNES" or tag == "BTDD_SNES_patched" then
-		if tonumber(which_level_filename) == nil or which_level ~= tonumber(which_level_filename) then
-			if settings.SuppressLog ~= true and (which_level > 14 or which_level == 1) then
-				log_console(string.format('Battletoads Double Dragon - no level specified (' .. string.format(tag) .. ')'))
-			end
-		else
-			log_console('Battletoads Double Dragon Level ' .. btdd_level_names[which_level])
-		end
-	elseif tag == "BT_SNES" then
-		if tonumber(bt_snes_level_recoder[tonumber(which_level_filename)]) == nil then
-			if tonumber(which_level_filename) == nil or tonumber(which_level_filename) > 8 then 
-				log_console(string.format('Battletoads in Battlemaniacs - no level specified (' .. string.format(tag) .. ')'))
-			end
-		else
-			log_console('Battletoads in Battlemaniacs Level ' .. tostring(which_level) .. ': ' ..  bt_snes_level_names[which_level] .. ' (' .. tag .. ')')
-		end
-	elseif tag ~= nil then 
-		log_console('Chaos Shuffler: recognized as ' .. string.format(tag))
-	elseif tag == nil or tag == NO_MATCH then
-		if settings.SuppressLog ~= true then
-			log_console(string.format('Chaos Shuffler: unrecognized - do you have chaos-shuffler-hashes.dat? %s (%s)',
-			gameinfo.getromname(), gameinfo.getromhash())) end
 	end
 end
 
@@ -10437,30 +10414,6 @@ function plugin.on_frame(data, settings)
 		prevdata = {} -- reset prevdata to avoid swaps
 	end
 	prev_framecount = new_framecount
-
-	-- Which level to patch into on game load?
-	-- Grab the first two characters of the filename, turned into a number.
-	local which_level_filename = string.sub((tostring(config.current_game)),1,2)
-	local which_level = tonumber(which_level_filename)
-
-if type(tonumber(which_level)) == "number" then 
-	which_level = tonumber(which_level)
-	--BT_NES
-		if tag == "BT_NES" or tag == "BT_NES_patched" then 
-		if which_level >13 or which_level <1 or which_level == nil then which_level = 1 end
-		end
-	--BT_SNES
-		if tag == "BT_SNES" then 
-		if which_level >8 or which_level <1 then which_level = 1 end
-		end
-	--BTDD (both)
-		if tag == "BTDD_NES" or tag == "BTDD_SNES" or tag == "BTDD_SNES_patched" then 
-		if which_level >14 or which_level <1 then which_level = 1 end
-		end
-	else 
-	which_level = 1
-	end
-	-- TODO: CAN WE MAKE THIS A FUNCTION AND CALL IT WHEN WE NEED IT
 	
 	-- avoiding super short swaps (<10) as a precaution
 	local grace = math.max(gamemeta and gamemeta.grace or 0, settings.grace or 0, 10)
@@ -10500,12 +10453,10 @@ if type(tonumber(which_level)) == "number" then
 				debug_timer = frames_since_restart + delay
 				swap_game_delay(delay)
 				swap_scheduled = true
-				if not settings.SuppressLog or settings.DebugSingleGame then
-					log_console('Chaos Shuffler: swap scheduled for %s (frame: %d, delay: %d)', tag, frames_since_restart, delay)
-				end
+				log_console('Chaos Shuffler: swap scheduled for %s (frame: %d, delay: %d)', tag, frames_since_restart, delay)
 				if PAUSE_ON_SWAP then client.pause() end
 			else
-				log_debug('Chaos Shuffler: swap blocked (grace) for %s (frame: %d, grace: %d)', tag, frames_since_restart, grace)
+				log_quiet('Chaos Shuffler: swap blocked (grace) for %s (frame: %d, grace: %d)', tag, frames_since_restart, grace)
 				if settings.GraceOnHit or gamemeta.grace_on_hit then
 					last_hit = frames_since_restart
 				end
@@ -10581,6 +10532,18 @@ if type(tonumber(which_level)) == "number" then
 						memory.writebyte(p2livesaddr, maxlives, LivesWhichRAM)
 					end
 				end
+			end
+		end
+		
+		-- Which level to patch into on game load?
+		-- Grab the first two characters of the filename, turned into a number.
+		local level_filename = tonumber(string.sub(config.current_game, 1, 2))
+		local which_level = level_filename
+		
+		if gamemeta.levels then
+			which_level = value_in_range(which_level, gamemeta.levels.min, gamemeta.levels.max, 1)
+			if which_level == level_filename then
+				gamemeta.levels:apply(which_level)
 			end
 		end
 
