@@ -135,6 +135,7 @@ BF62774E74DB84883706F3F2D0BD3D469A090ADB MetroidNes                   -- Metroid
 74A2FAD86B9A4C013149B1E214BC4600EFB1066D Metroid2                     -- Metroid II Return of Samus GB (WW)
 26DF482165A3B5062004C5EE9285A5B22AD17B0F Metroid2                     -- Metroid II Return of Samus GBC EJRTQ colorization patch
 CA33F4348C2C05DD330D37B97E2C5A69531DFE87 MetroidFusion                -- Metroid Fusion GBA (US)
+AAA4CD224EA15E9298E92BC0B571823C3928E14E MetroidFusionRedux           -- Metroid Fusion (Redux 7-2026)
 5DE8536AFE1F0078EE6FE1089F890E8C7AA0A6E8 MetroidZero                  -- Metroid Zero Mission GBA (US)
 
 -- Zelda Block
@@ -359,6 +360,7 @@ D8B1088520F7C5F81433292A9258C1184AFA1457 StarFox64_N64                -- Star Fo
 75DAD8B461864DDD396C75BDB68378BB2BC47D99 SuperDodgeBall               -- Super Dodge Ball NES (US) (No Intro Headered)
 7A466684F5928FE656841DF20BCB458E74108239 SuperDodgeBall               -- Super Dodge Ball NES (US) (No Intro Headerless)
 3A3D972860176C856053CF3F16575339DAD28DC2 EdwardRandy_ARC              -- The Cliffhanger - Edward Randy (World ver 3)
+53048936E07936C28E3F79086C0CB568358D9FCD EdwardRandy_ARC              -- The Cliffhanger - Edward Randy (Japan ver 3)
 FAE4F9A2239AA7EF14044B09C7B969C7E51C4ABD SuperDodgeBall_ARC           -- Super Dodge Ball / Kunio no Nekketsu Toukyuu Densetsu (Arcade)
 0D994A58B7ACDFE9357E5405ACEBE232128B80FE JUNKY_BALL_MR_GBA            -- Super Monkey Ball Jr. (USA)
 A0F16ED356CF99DE2E1B72FB289C9C7FCE8F2AB3 ContraIII_SNES               -- Super Probotector - Alien Rebels (Europe)
@@ -460,6 +462,7 @@ DCF24B8BCBDA766FFAFDEBFD39AAD073C18176F3 JurassicPark1_SNES           -- Jurassi
 FF66CEFEFBDB85E5AE28BE3C3742C060BF78A5EB KirbyDreamland_GB            -- Kirby's Dream Land (US) - DX version 1.3
 8A2898FFA17E25F43793F40C88421D840D372D3C KirbyDreamland2_GB           -- Kirby's Dream Land 2 (US, EU)
 A34FB26E1066E464E55B473F0A1F87E9C764A010 KirbyDreamland2_GB           -- Kirby's Dream Land 2 (US, EU) - DX version 1.2
+12AFF7538F43641A1E2BF424593DF5B49FE150F6 KirbyDreamland3_SNES         -- Kirby's Dream Land 3 (US)
 CCA1E67FA230BF4F60154F5EA55D06568229DC5D KirbySuperStar_SNES          -- Kirby Super Star (US)
 6CEA2D46B929A3BB347B060A77FCCC83526FB855 KirbyCrystalShards_N64       -- Kirby 64: The Crystal Shards (US)
 -- E8C38075334CFED4A3AEE5C420E9D0E60B21E27E KonamiKrazyRacers_GBA        -- Konami Krazy Racers (US)
@@ -602,6 +605,7 @@ A9B8168DFE135A643C59BBBAB0E3B274F2A9C23A ClassicConcentration_NES     -- Classic
 F8BDEED573BD4324B5AB174BEDE444C4F53A49D0 DoubleDare_NES               -- Double Dare (NES)
 E1F29AD02981EC84156B68D4FB95B2182DC8CD82 KirbysDreamCourse_SNES       -- Kirby's Dream Course (USA)
 8426A16F7D8656C8D2CE4AC3151EC96B433F938D Skyblazer_SNES               -- Skyblazer (USA)
+F2832EB02547C39CAE3BDAAB5C2A53E4F8B31810 SoulBlazer_SNES              -- Soul Blazer (US) (SNES, NTSC-U)
 9B06E78849F68B78E1E9581E04A6BE2892543C0B Superturrican_SNES           -- Super Turrican (SNES, NTSC-U)
 A70896843FB9EA0A30F4A9F9CA443135552F0157 Superturrican2_SNES          -- Super Turrican 2 (SNES, NTSC-U)
 64D3D6334F38C8B10E819FCFB874CA9DCE13B5D3 WheelOfFortune_NES           -- Wheel of Fortune (NES)
