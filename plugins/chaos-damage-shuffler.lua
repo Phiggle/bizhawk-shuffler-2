@@ -94,7 +94,7 @@ plugin.description =
 	-Metroid (NES), 1p
 	-Metroid II (GB or GBC color patch), 1p
 	-Super Metroid (SNES) - 1p, US/JP version
-	-Metroid Fusion (GBA), 1p
+	-Metroid Fusion (GBA), 1p - supports Redux (7-2026) hack
 	-Metroid Zero Mission (GBA), 1p
 
 	ZELDA BLOCK
@@ -130,6 +130,7 @@ plugin.description =
 	KIRBY BLOCK
 	-Kirby's Dream Land (GB), 1p - also supports DX version 1.3
 	-Kirby's Dream Land 2 (GB), 1p - also supports DX version 1.2
+	-Kirby's Dream Land 3 (SNES), 1-2p
 	-Kirby's Adventure (NES), 1p
 	-Kirby: Super Star (SNES), 1p
 	-Kirby: Nightmare in Dream Land (GBA), 1p
@@ -323,6 +324,7 @@ plugin.description =
 	-Skyblazer (SNES), 1p
 	-Snake Rattle 'n Roll (NES), 1p
 	-Solomon no Kagi (Arcade), 1p
+	-Soul Blazer (SNES), 1p
 	-Sonic Jam 6 (bootleg) (Genesis/Mega Drive), 1p
 	-Sparkster (SNES), 1p
 	-Spider-Man & Venom - Maximum Carnage (SNES), 1p
@@ -2448,6 +2450,38 @@ local function PockyRocky2_SNES_swap(gamemeta)
 	end
 end
 
+local function metroid_fusion_offset(gamemeta)
+	return iframe_health_swap({
+		-- needed for support for Metroid Fusion Redux, which does offset several addresses
+		-- function assumes that area and room ID are unaffected by these offsets
+		-- affected includes gamestate, HP, iframes addresses
+		-- metadata should pass the offset here (0 if not applicable)
+		is_valid_gamestate=function()
+			return memory.read_u8(0x0BDE + gamemeta.offset, "IWRAM") == 1
+				-- don't shuffle on omega metroid forced hit
+				and not (memory.read_u8(0x002C, "IWRAM") == 0 -- area id: main deck
+					and memory.read_u8(0x002D, "IWRAM") == 63 -- room id: omega metroid room
+					and memory.read_u16_le(0x1310 + gamemeta.offset, "IWRAM") == 1 -- hp: omega metroid forced hit takes hp to 1
+					and memory.read_u8(0x1249 + gamemeta.offset, "IWRAM") == 48) -- iframes: you should still shuffle from time up while at 1 hp
+		end,
+		get_iframes=function() return memory.read_u8(0x1249 + gamemeta.offset, "IWRAM") end,
+		get_health=function() return memory.read_u16_le(0x1310 + gamemeta.offset, "IWRAM") end,
+		iframe_minimum=function() return 30 end,
+		-- SRX amoebas, TRO leech boss, TRO plant boss flowers, electric water
+		-- all do damage with short iframes (4) rather than skipping iframes entirely like lava/heat
+		-- Ridley's grab does this too, repeatedly popping up to 29 iframes on hitting 0
+		-- normal damage for shuffing triggers 48 iframes
+		-- in other words, requiring iframes >=30 to swap should be fine here
+		other_swaps=function()
+			-- check if we ran out of time (sector 3, secret lab, ending)
+			local time_up_changed, time_up_curr, _ = update_prev('time up', memory.read_u8(0x08D7 + gamemeta.offset, "IWRAM") == 2)
+			-- 0: no timer, 1: timer on, 2: timer just ran out
+			return time_up_changed and time_up_curr, 65
+			-- add extra delay so you get the whiteout animation before shuffling
+		end,
+	})
+end
+
 local function always_swap(gamemeta)
 	return function(data)
 		return true -- Always swap!
@@ -2645,15 +2679,43 @@ local gamedata = {
 		maxhp=function() return 60 end,
 	},
 	['SuperDodgeBall_ARC']={ -- Super Dodge Ball / Kunio no Nekketsu Toukyuu Densetsu (Arcade)
-		func=health_swap,
-		is_valid_gamestate=function() return memory.read_u8(0x001075, "m68000 : ram : 0x100000-0x10FFFF")==7 end,
-		get_health=function()
-			-- the three team members have their own life bars, so we can treat them like one giant life bar
-			return memory.read_s16_be(0x005CBC, "m68000 : ram : 0x100000-0x10FFFF") -- p1 team member 1 health
-			+ memory.read_s16_be(0x005CBE, "m68000 : ram : 0x100000-0x10FFFF") -- p1 team member 2 health
-			+ memory.read_s16_be(0x005CC0, "m68000 : ram : 0x100000-0x10FFFF") end, -- p1 team member 3 health
-		other_swaps=function() return false end,
-		grace=10,
+		func=function() return function()
+		
+			local gamestate = memory.read_u8(0x001075, "m68000 : ram : 0x100000-0x10FFFF") -- displays as 7 during gameplay, 8 during continue sequence
+			
+			-- the three team members have their own life bars
+			local p1_m1_health_changed, p1_m1_health_curr, p1_m1_health_prev = update_prev('p1_m1_health', memory.read_s16_be(0x005CBC, "m68000 : ram : 0x100000-0x10FFFF"))
+			local p1_m2_health_changed, p1_m2_health_curr, p1_m2_health_prev = update_prev('p1_m2_health', memory.read_s16_be(0x005CBE, "m68000 : ram : 0x100000-0x10FFFF"))
+			local p1_m3_health_changed, p1_m3_health_curr, p1_m3_health_prev = update_prev('p1_m3_health', memory.read_s16_be(0x005CC0, "m68000 : ram : 0x100000-0x10FFFF"))
+		
+			local activeplayer = memory.read_u8(0x0055BD, "m68000 : ram : 0x100000-0x10FFFF") -- first player = 0, second player = 2, third player = 3
+			
+			local timer_seconds_changed, timer_seconds_curr, timer_seconds_prev = update_prev('timer_seconds', memory.read_s8(0x0065AB, "m68000 : ram : 0x100000-0x10FFFF"))
+			local timer_milliseconds = memory.read_u8(0x0065AA, "m68000 : ram : 0x100000-0x10FFFF")
+			
+			local p1_coins_changed, p1_coins_curr, p1_coins_prev = update_prev('p1_coins', from_bcd(memory.read_u8(0x000034, "m68000 : ram : 0xD00000-0xD0FFFF")))
+			
+			if gamestate==7 then -- during gameplay
+				-- shuffle on active player damage until player's team is wiped out
+				if p1_m1_health_curr + p1_m2_health_curr + p1_m3_health_curr > -3 then -- a player is out at -1 health, so a fully ko'd team would be at -1*3
+					-- shuffle if the active player takes damage, ignoring damage to rest of the team
+					if activeplayer == 0 then
+						if p1_m1_health_changed and p1_m1_health_curr < p1_m1_health_prev then return true end
+					elseif activeplayer == 2 then
+						if p1_m2_health_changed and p1_m2_health_curr < p1_m2_health_prev then return true end
+					elseif activeplayer == 4 then
+						if p1_m3_health_changed and p1_m3_health_curr < p1_m3_health_prev then return true end
+					end
+				end	
+			elseif gamestate==8 then -- during continue sequence
+				-- shuffle on coin usage (loss)
+				if p1_coins_changed and p1_coins_curr == p1_coins_prev - 1 then return true end
+			end
+						
+			return false end
+		end,
+		grace=15,
+		grace_on_hit=true,
 	},
 	['CaptainNovolin']={ -- Captain Novolin SNES
 		func=singleplayer_withlives_swap,
@@ -3501,18 +3563,25 @@ local gamedata = {
 			-- countdown, active race, or crashed
 			return substate == 3 or substate == 5 or substate == 10
 		end,
-		p1gethp = function() return memory.read_s16_le(0x12DEA, "EWRAM") end,
+		p1gethp = function()
+			local offset = memory.read_u8(0x131CF, "EWRAM") * 0xCC
+			return memory.read_s16_le(0x12DEA + offset, "EWRAM")
+		end,
 		p1getlc = function() return 1 end, -- only swap on health loss
 		-- don't swap if vehicle selection forces a health change
-		gettogglecheck = function() return memory.read_u8(0x12E16, "EWRAM") end,
+		gettogglecheck = function()
+			local offset = memory.read_u8(0x131CF, "EWRAM") * 0xCC
+			return memory.read_u8(0x12E16 + offset, "EWRAM")
+		end,
 		-- different per vehicle, but this seems like the max value
 		maxhp = function() return 16320 end, -- 255*64
 		minhp = -1, -- swap on 0 health as well
 		swap_exceptions = function()
+			local offset = memory.read_u8(0x131CF, "EWRAM") * 0xCC
 			-- if health remains, exempt grazing walls without hitting them
-			return memory.read_s16_le(0x12DEA, "EWRAM") > 0
-				and memory.read_u8(0x12E1F, "EWRAM") == 1
-				and memory.read_u8(0x12E20, "EWRAM") ~= 0
+			return memory.read_s16_le(0x12DEA + offset, "EWRAM") > 0
+				and memory.read_u8(0x12E1F + offset, "EWRAM") == 1
+				and memory.read_u8(0x12E20 + offset, "EWRAM") ~= 0
 		end,
 		delay = 30,
 		grace = 120,
@@ -3532,10 +3601,16 @@ local gamedata = {
 		-- 0x0BFD IWRAM is used here only with 0x0BFA = 1 as stale values can persist
 		--   this is more of a 'gamemode' - used to filter out demo mode and ghost replays (3 and 7)
 		--   as otherwise they will produce the same gamestate values (and can take damage)
+		-- the following addresses are for index #0, see note for 0x131CF
 		-- 0x12DF0 EWRAM is the timer for failing a boost start
 		-- 0x12DF4 EWRAM is the 'ui scale' health (0-64)
 		-- 0x12E16 EWRAM is the player machine id, proxy for max health changes
 		-- 0x12E1F EWRAM is the current 'terrain type' id
+		-- these addresses are machine independent:
+		-- 0x131CF EWRAM is the player machine index
+		--   for gp mode in this game, you aren't always machine #0
+		--   data for other machines comes afterwards with offset addresses
+		--   the machine data size is 0xCC (204) bytes and so an (index * size) offset is needed
 		-- demo mode is actually a good tutorial with input overlays ([select] on title to force)
 	},
 	['FZeroGPLegend_GBA'] = { -- F-Zero: GP Legend, GBA
@@ -3968,30 +4043,13 @@ local gamedata = {
 		grace=60,
 	},
 	['MetroidFusion']={ -- Metroid Fusion, GBA
-		func=iframe_health_swap,
-		is_valid_gamestate=function()
-			return memory.read_u8(0x0BDE, "IWRAM") == 1
-				-- don't shuffle on omega metroid forced hit
-				and not (memory.read_u8(0x002C, "IWRAM") == 0 -- area id: main deck
-					and memory.read_u8(0x002D, "IWRAM") == 63 -- room id: omega metroid room
-					and memory.read_u16_le(0x1310, "IWRAM") == 1 -- hp: omega metroid forced hit takes hp to 1
-					and memory.read_u8(0x1249, "IWRAM") == 48) -- iframes: you should still shuffle from time up while at 1 hp
-		end,
-		get_iframes=function() return memory.read_u8(0x1249, "IWRAM") end,
-		get_health=function() return memory.read_u16_le(0x1310, "IWRAM") end,
-		iframe_minimum=function() return 30 end,
-		-- SRX amoebas, TRO leech boss, TRO plant boss flowers, electric water
-		-- all do damage with short iframes (4) rather than skipping iframes entirely like lava/heat
-		-- Ridley's grab does this too, repeatedly popping up to 29 iframes on hitting 0
-		-- normal damage for shuffing triggers 48 iframes
-		-- in other words, requiring iframes >=30 to swap should be fine here
-		other_swaps=function()
-			-- check if we ran out of time (sector 3, secret lab, ending)
-			local time_up_changed, time_up_curr, _ = update_prev('time up', memory.read_u8(0x08D7, "IWRAM") == 2)
-			-- 0: no timer, 1: timer on, 2: timer just ran out
-			return time_up_changed and time_up_curr, 65
-			-- add extra delay so you get the whiteout animation before shuffling
-		end,
+		func=metroid_fusion_offset,
+		offset = 0, -- default version of the game
+		grace=60,
+	},
+	['MetroidFusionRedux']={ -- Metroid Fusion, GBA - Redux QoL hack (7-2026)
+		func=metroid_fusion_offset,
+		offset = 0x0034,
 		grace=60,
 	},
 	['MetroidZero']={ -- Metroid Zero Mission, GBA
@@ -4708,10 +4766,19 @@ local gamedata = {
 	},
 	['NeoTurfMasters_ARC']={ -- Neo Turf Masters / Big Tournament Golf
 		func=health_swap,
-		is_valid_gamestate=function() return memory.read_u8(0x000163, "m68000 : ram : 0x100000-0x10FFFF")==178 -- gmode
-			and memory.read_u8(0x002EA6, "m68000 : ram : 0x100000-0x10FFFF")~=255 end, -- preventing additional swapping for stroke penalties (value is 255 for penalty stroke)
-		get_health=function() return -memory.read_u8(0x007006, "m68000 : ram : 0x100000-0x10FFFF") end,
-		other_swaps=function() return false end,
+		is_valid_gamestate=function() return (memory.read_u8(0x000163, "m68000 : ram : 0x100000-0x10FFFF")==178 -- gmode
+			and memory.read_u8(0x002EA6, "m68000 : ram : 0x100000-0x10FFFF")~=255) -- value at 255 shows for onscreen messages like penalty strokes; prevent shuffling on penalty
+			or memory.read_u8(0x007085, "m68000 : ram : 0x100000-0x10FFFF")==1 -- specifically allow shuffling on hole complete despite displaying an onscreen message
+			end,
+		get_health=function()
+			-- score incrementation occurs before the stroke, so we ignore the first incrementation to prevent the appearance of a false shuffle at the start
+			return math.min(-memory.read_u8(0x007006, "m68000 : ram : 0x100000-0x10FFFF"), -1)
+			end,
+		other_swaps=function()
+			-- to compensate for ignoring the first stroke, we shuffle one more time on a completed hole
+			local holecompleted_changed, holecompleted_curr, holecompleted_prev = update_prev('stagecompleted', memory.read_u8(0x007085, "m68000 : ram : 0x100000-0x10FFFF"))
+			if holecompleted_changed and holecompleted_curr == 1 and holecompleted_prev == 0 then return true, 253 end
+			end,
 		CanHaveInfiniteLives=true,
 		p1livesaddr=function() return 0x00D572 end, -- holes remaining
 		LivesWhichRAM=function() return "m68000 : ram : 0x100000-0x10FFFF" end,
@@ -6237,7 +6304,7 @@ local gamedata = {
 			end
 		end,
 		CanHaveInfiniteLives=true,
-		swap_exceptions=function() return memory.read_u8(0xF4, "WRAM") == 0 end,
+		swap_exceptions=function() return memory.read_s16_le(0xF4, "WRAM") == 0 end, -- Has no effect in Arcade Edition/Nintendo Super System, however
 		p1livesaddr=function() return 0x1C end,
 		LivesWhichRAM=function() return "WRAM" end,
 		maxlives=function() return 0x03 end, -- 4 on screen will tell you it's working without counting down 69+ lives on level clear
@@ -6685,6 +6752,52 @@ local gamedata = {
 		-- 0x1EFF WRAM holds the id for demos (1-3), 0 for regular gameplay
 		-- you only have one life for the boss rush, regardless of life count
 	},
+	['KirbyDreamland3_SNES'] = { -- Kirby's Dream Land 3, SNES
+		func = twoplayers_withlives_swap,
+		gmode = function()
+			return memory.read_s16_le(0x0022, "CARTRAM") == 2 -- in game
+				and memory.read_u8(0x5F24, "CARTRAM") == 0 -- not a demo
+		end,
+		p1gethp = function() return memory.read_u8(0x39D1, "CARTRAM") end, -- kirby
+		p1getlc = function() return memory.read_u8(0x39CF, "CARTRAM") end,
+		p2gethp = function() -- gooey
+			if memory.read_s16_le(0x5543, "CARTRAM") ~= 128 then return 0 end
+			return memory.read_u8(0x39D3, "CARTRAM") + 1 -- only if p2 controls
+		end,
+		p2getlc = function() return 1 end, -- no life count for p2
+		maxhp = function() return 10 end,
+		swap_exceptions = function()
+			-- exempt kirby hp sacrifice to summon gooey
+			local _, gooey_hp, prev_hp = update_prev('gooey_hp', memory.read_u8(0x39D3, "CARTRAM"))
+			if prev_hp == 0 and gooey_hp > prev_hp then return true end
+			-- exempt gooey self-destruct
+			local timer = memory.read_u8(0x5545, "CARTRAM")
+			local countdown = memory.read_u8(0x5547, "CARTRAM")
+			return update_prev('countdown', countdown) and countdown == 0 and timer > 0
+		end,
+		-- Infinite* Lives section
+		CanHaveInfiniteLives = true,
+		p1livesaddr = function() return 0x39CF end,
+		LivesWhichRAM = function() return "CARTRAM" end,
+		maxlives = function() return 70 end,
+		ActiveP1 = function() return true end,
+		-- OTHER NOTES:
+		-- lose 2 health to summon gooey, incl. max health (10 -> 8)
+		--   health loss capped at 1hp, can still summon
+		-- if gooey is controlled by p2, 0x5543 CARTRAM is set to 128
+		--   for cpu gooey, this remains 0 (256 in 2p demo, -1 prevents summoning)
+		-- animals share player health this time
+		--   p1 animal id (0-5) is at 0x5557 CARTRAM, -1 for none
+		-- current p1 ability (1-8) is at 0x54A9 CARTRAM, 0 for none, (9 special)
+		--   for testing, id changes will be applied if you 'regrab' the ability
+		-- you only have one life for the boss rush, regardless of life count
+		--   in this game, a life is still deducted on failure
+		-- for self-destructing gooey:
+		--   pressing the button initially starts a countdown (from 7) and a (24-frame) timer
+		--   button presses before the timer expires advance the countdown and reset the timer
+		--   gooey self-destructs when the countdown hits 0 if the timer is still active
+		--   if the timer expires, the next button press will instead restart the process
+	},
 	['KirbyMirror_GBA']={ -- Kirby and the Amazing Mirror, (GBA)
 		func=singleplayer_withlives_swap,
 		p1gethp=function() return memory.read_s8(0x020FE0, "EWRAM") end,
@@ -6699,22 +6812,55 @@ local gamedata = {
 	},
 	['KirbyNightmareDreamland_GBA']={ -- Kirby - Nightmare in Dreamland, (GBA)
 		func=singleplayer_withlives_swap,
+		gmode=function()
+			-- Kirby: we are in active gameplay if we are on any of the screens below (0x23D8 IWRAM)
+			local valid_gamestates = {
+				[0x05] = true, -- on map
+				[0x08] = true, -- in a side-scrolling stage
+				[0x14] = true, -- Boss Endurance mode
+				[0x16] = true, -- Game Over
+			}
+			-- possible future swap support: 0x0E Quick Draw, 0x0F Bomb Rally, 0x10 Air Grind
+			-- Meta Knightmare: there is a timer running for this mode (and Boss Endurance too)
+			-- milliseconds for that timer: 0x6068 EWRAM
+			-- that timer needs to be running for us to swap in that mode, or we need to be on the game over screen
+			-- this prevents swaps on simply loading into the mode, as deaths are processed on the map screen
+			-- including a life being deducted on spawning into a map (solved for Kirby using an exception on title cards)
+			if (memory.read_u8(0x1F30, "IWRAM") == 1 -- character is Meta Knight
+				and update_prev("timer_running", memory.read_u8(0x6068, "EWRAM")) == false) -- timer is NOT running 
+				then return false
+			else
+				return valid_gamestates[memory.read_u8(0x23D8, "IWRAM")] -- on a valid screen
+			end 
+		end,
 		p1gethp=function() return memory.read_s8(0x5588, "EWRAM") end,
 		p1getlc=function() return memory.read_s8(0x7D48, "EWRAM") end,
-		maxhp=function() return 56 end,
+		p1getcc=function() 
+			if memory.read_u8(0x23D8, "IWRAM") == 0x16 -- game over screen
+				then return 0 -- if this screen appears, swap
+				else return 1
+			end
+		end,
+		maxhp=function() return memory.read_s8(0x5580, "EWRAM") end,
+		swap_exceptions=function()
+			local lives_changed=update_prev('lives', memory.read_s8(0x7D48, "EWRAM"))
+			if memory.read_u8(0x23D8, "IWRAM") == 0x14 and lives_changed then return true end
+		-- turn off shuffling for lives when you start Boss Endurance mode
+		-- you only get one life there, so the lives counter dropping on starting should be ignored
+		-- you will still shuffle on reaching the Game Over screen
+			local title_card_changed = update_prev("title_card", memory.read_u8(0xAF04, "EWRAM"))
+			if title_card_changed then return true end
+		-- Kirby: on loading a save, when the title card for the chapter disappears, you "spend" a life and go to max HP
+		-- so don't shuffle whenever the title card transitions
+		-- it sure looks like 0xAF04 only toggles up to 1 during a title card cutscene and is 0 otherwise!
+			return false
+		end,
 		CanHaveInfiniteLives=true,
 		p1livesaddr=function() return 0x7D48 end,
 		LivesWhichRAM=function() return "EWRAM" end,
 		maxlives=function() return 69 end,
-		ActiveP1=function() return true end, -- p1 is always active!
-		-- on loading a save, when the title card for the chapter disappears, you "spend" a life and go to max HP
-		-- so don't shuffle whenever the title card transitions
-		-- it sure looks like 0xAF04 only toggles up to 1 during a title card cutscene and is 0 otherwise!
-		swap_exceptions=function() 
-			local title_card_changed = update_prev("title_card", memory.read_u8(0xAF04, "EWRAM"))
-			if title_card_changed then return true end
-			return false
-		end,
+		ActiveP1=function() return memory.read_u8(0x23D8, "IWRAM") ~= 0x14 end,
+		-- turns off infinite lives if you're in Boss Endurance mode
 	},
 	['KirbyCrystalShards_N64'] = { -- Kirby 64: The Crystal Shards, N64
 		func = singleplayer_withlives_swap,
@@ -7676,6 +7822,7 @@ local gamedata = {
 		ActiveP2=function() return memory.read_u8(0x0047, "RAM") == 1 end, -- 1 means 2p mode
 		maxhp=function() return 60 end,
 		grace=60,
+		grace_on_hit=true, -- prevent grapples from causing repeated shuffles
 		delay=10,
 	},
 	['TMNT3_NES']={ -- Teenage Mutant Ninja Turtles III: The Manhattan Project (NES)
@@ -7694,6 +7841,7 @@ local gamedata = {
 		ActiveP2=function() return memory.read_u8(0x0028, "RAM") == 1 end, -- 1 means 2p mode
 		maxhp=function() return 127 end,
 		grace=60,
+		grace_on_hit=true, -- prevent grapples from causing repeated shuffles
 		delay=10,
 		swap_exceptions=function()
 			-- if both HP goes down and "doing a special/desperation move" is true, don't swap.
@@ -7719,6 +7867,7 @@ local gamedata = {
 		ActiveP2=function() return memory.read_u8(0x00A8, "WRAM") == 1 end, -- 1 means 2p mode
 		maxhp=function() return 96 end,
 		grace=60,
+		grace_on_hit=true, -- prevent grapples from causing repeated shuffles
 		delay=10,
 		swap_exceptions=function()
 		-- special moves cost HP if they hit, either during the special or on their finishing frame
@@ -7741,41 +7890,14 @@ local gamedata = {
 		return false
 		end,
 	},
-	['EdwardRandy_ARC']={ -- The Cliffhanger - Edward Randy (World ver 3)
-		func=function() return function(data)
-				local gmode = memory.read_u8(0x0000, "m68000 : ram : 0x194000-0x197FFF")==1
-		
-				-- score doubles as health, and is drained for several frames on damage, so we'll only shuffle when health stops falling to avoid constant shuffle
-				if data.isHealthFalling == nil then data.isHealthFalling = false end -- set a starting value of false, but do not overwrite a true value
-								
-				-- health (score) is stored as hex over three values each representing two digits, so need to be both converted and combined into a single value
-				local healthHexUnits = memory.read_u8(0x1533, "m68000 : ram : 0x194000-0x197FFF")
-				local healthHexHundreds = memory.read_u8(0x1532, "m68000 : ram : 0x194000-0x197FFF")
-				local healthHexTenThousands = memory.read_u8(0x1531, "m68000 : ram : 0x194000-0x197FFF")
-				
-				-- Get upper nybble, bit-shift right 4 bits
-				local tens = (healthHexUnits & 0xF0)>>4
-				local thousands = (healthHexHundreds & 0xF0)>>4
-				local hundredtens = (healthHexTenThousands & 0xF0)>>4
-				
-				-- Just the lower nybble
-				local ones = healthHexUnits & 0x0F
-				local hundreds = healthHexHundreds & 0x0F
-				local tenthousands = healthHexTenThousands & 0x0F
-				
-				-- Merge 'em
-				local _, health_curr, health_prev = update_prev('health',
-					ones + (10 * tens) + (100 * hundreds) + (1000 * thousands) + (10000 * tenthousands) + (100000 * hundredtens))
-								
-				-- when health is not falling, wait until it is. when health is failing, wait until it stops, then swap.
-				if gmode and health_prev ~= nil then
-					if not data.isHealthFalling then 
-						data.isHealthFalling = health_curr < health_prev
-					elseif health_curr >= health_prev then
-						return true end
-					end
-				return false end
-			end,
+	['EdwardRandy_ARC']={ -- The Cliffhanger - Edward Randy
+		func=singleplayer_withlives_swap,
+		gmode=function() return memory.read_u8(0x0000, "m68000 : ram : 0x194000-0x197FFF")==1 end,
+		p1gethp=function() return from_bcd(memory.read_u24_be(0x1531, "m68000 : ram : 0x194000-0x197FFF")) end,
+		p1getlc=function() return 1 end,
+		maxhp=function() return 999999 end,
+		minhp=-1,
+		delay=10, -- health/score drains continually when damaged, delay shuffle until health stops falling
 		CanHaveInfiniteLives=true,
 		p1livesaddr=function() return 0x000C end, -- credits provided
 		LivesWhichRAM=function() return "m68000 : ram : 0x194000-0x197FFF" end,
@@ -8089,6 +8211,7 @@ local gamedata = {
 		p1livesaddr=function() return 0x1298 end,
 		LivesWhichRAM=function() return "Main RAM" end,
 		maxlives=function() return 69 end, -- The HUD stops counting at 9; the code itself does not
+		ActiveP1=function() return true end, -- p1 is always active!
 	},
 	['SonicAdvance1_GBA']={ -- Sonic Advance (GBA)
 		func=sonic_swap,
@@ -9687,18 +9810,20 @@ local gamedata = {
 	['MajuuOu_SNES']={ -- Majuu Ou (Japan) / King of Demons
 		func=singleplayer_withlives_swap,
 		p1gethp=function() return memory.read_u8(0x00009F, "WRAM") end,
-		p1getlc=function() return memory.read_u8(0x0000A3, "WRAM") end,
+		p1getlc=function() return from_bcd(memory.read_u8(0x0000A3, "WRAM")) end,
 		maxhp=function() return 112 end,
-		gmode=function() return memory.read_u8(0x000209, "WRAM") == 0 end, -- might be not equal to 20?
+		gmode=function() return memory.read_u8(0x000209, "WRAM") == 0  -- might be not equal to 20?
+			and memory.read_u8(0x000048, "WRAM") == 15 end, -- check if screen is transitioning; wife status momentarily switches to off during screen transitions
+		delay=30, -- prevent rapid shuffling when grabbed by spider or centipede bosses
 		CanHaveInfiniteLives=true,
 		p1livesaddr=function() return 0x0000A3 end,
 		LivesWhichRAM=function() return "WRAM" end,
-		maxlives=function() return 9 end,
+		maxlives=function() return 0x69 end,
 		ActiveP1=function() return true end, -- p1 is always active!
 		other_swaps=function()
-		-- if the player has his wife (the fairy), she revives him on death, so she's expended instead of a life. goes from 0 when disabled to 19 when enabled
-		local wife_changed, wife_cur, wife_prev = update_prev('wife', memory.read_u8(0x0006A7, "WRAM"))
-		return (wife_changed and wife_cur == 0 and wife_prev == 19) end,
+			-- if the player has his wife (the fairy), she revives him on death, so she's expended instead of a life. goes from 0 when disabled to 19 when enabled
+			local wife_changed, wife_cur, wife_prev = update_prev('wife', memory.read_u8(0x0006A7, "WRAM"))
+			return (wife_changed and wife_cur == 0 and wife_prev == 19) end,
 	},	
 	['GundamRainbow_ARC']={ -- SD Gundam Sangokushi Rainbow Tairiku Senki (Japan), arcade
 		func=singleplayer_withlives_swap,
@@ -10003,6 +10128,17 @@ local gamedata = {
 		LivesWhichRAM=function() return "Work Ram High" end,
 		maxlives=function() return 69 end,
 		ActiveP1=function() return true end, -- p1 is always active!
+	},
+	['SoulBlazer_SNES']={ -- Soul Blazer, SNES 
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return memory.read_u8(0x1B88, "WRAM") end,
+		p1getlc=function() return 0 end,
+		maxhp=function() return memory.read_u8(0x1b8a, "WRAM") end,
+		minhp=-1,
+		grace=32,
+		-- iframes address: 0x0826 WRAM (signed 8-bit)
+		-- goes to -31 on hit and counts up by 1 per frame until reaching 0
+		grace_on_hit=true,
 	},
 }
 
