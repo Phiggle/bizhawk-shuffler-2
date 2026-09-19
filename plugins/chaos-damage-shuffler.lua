@@ -4711,8 +4711,12 @@ local gamedata = {
 		func=health_swap,
 		is_valid_gamestate=function() return memory.read_u8(0x1FD6A0, "MainRAM")==160 end,
 		get_health=function() return memory.read_u8(0x141451, "MainRAM") end,
-		other_swaps=function() return false end,
+		other_swaps=function()
+			-- timer over forces player to restart stage, but causes no actual damage
+			local timer_changed, timer_curr, timer_prev = update_prev('timer', memory.read_u16_le(0x1413CA, "MainRAM"))
+			return timer_changed and timer_curr == 0 and timer_prev == 1, 80 end,
 		suspend_updates=function() return memory.read_u8(0x07D2BE, "MainRAM")==160 end, -- suppresses shuffle from life reset to default at the beginning of the stage
+		delay=18, -- damage from falling off platform is a little early, attempt to make it more visually intuitive
 	},
 	['BUBSY1_SNES']={ -- Bubsy in Claws Encounters of the Furred Kind, SNES
 		func=singleplayer_withlives_swap,
