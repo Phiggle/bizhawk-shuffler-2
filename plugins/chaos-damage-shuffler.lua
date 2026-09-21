@@ -259,8 +259,9 @@ plugin.description =
 	-Majuu Ou (Japan) / King of Demons (SNES), 1p
 	-Makai Mura for WonderSwan (WS), 1p
 	-Marble Madness (NES), 1-2p
-	-Mario Kart: Super Circuit (SNES), 1p, Grand Prix - shuffles on collisions with other karts (lost coins or have 0 coins), falls
-	-Mario Kart (DS), 1p
+	-Mario Kart: Super Circuit (GBA), 1p, Grand Prix - shuffles on collisions with other karts (lost coins or have 0 coins), falls
+	-Mario Kart 64 (N64), 1p
+	-Mario Kart DS (DS), 1p
 	-Mario Paint (SNES), joystick hack, Gnat Attack, 1p
 	-Math Blaster - Episode 1 (SNES), 1p
 	-Mega Q*Bert (Genesis/Mega Drive), 1p
@@ -9545,12 +9546,39 @@ local gamedata = {
 		ActiveP1=function() return true end, -- p1 is always active!
 		delay=5, -- good to give a slightly higher delay to make the damage more readable to the player
 	},
-	['ClashAtDemonhead_NES']={ -- Clash At Demonhead
-		func=health_swap,
-		is_valid_gamestate=function() return memory.read_u8(0x002C, "RAM")==24 end,
-		get_health=function() return memory.read_s8(0x009F, "RAM") end,	
-		other_swaps=function() return false end,
-		grace=20,
+	['MarioKart_N64'] = { -- Mario Kart 64
+		func = function(gamemeta)
+			return function()
+				local swap = false
+				
+				local hit = memory.read_u32_be(0x0F6A4C, "RDRAM") & 0x070304C0 ~= 0
+				local fall = memory.read_u16_be(0x0F6A5A, "RDRAM") & 0xF ~= 0
+				
+				local damage = hit or fall
+				
+				if update_prev('damage', damage) and damage then swap = true end
+				
+				if not gamemeta.is_valid_gamestate() then swap = false end
+				
+				return swap, gamemeta.delay
+			end
+		end,
+		is_valid_gamestate = function()
+			return memory.read_u32_be(0x0DC50C, "RDRAM") == 4 -- racing
+				and memory.read_u32_be(0x0DC510, "RDRAM") == 3 -- in-race
+				and memory.read_u16_be(0x0DC51C, "RDRAM") == 0 -- not a demo
+		end,
+		delay = 12,
+		-- OTHER NOTES:
+		-- 0x0DC50C is the general state, 4 for gameplay
+		-- 0x0DC510 is a sub-state value, 3 during active play (not before/after)
+		-- 0x0DC51C is set to 1 during gameplay demos
+		-- p1 kart data is stored starting at 0x0F6990
+		--   data size is 0xDD8 (3544) bytes, other karts follow
+		-- 0x0F6A4C: status word, bitset of many status flags
+		--   test is for the union of flags that count as 'damage'
+		--   this covers events like bananas, shells, lightning, etc
+		-- 0x0F6A5A: status for falls, masked values cycle during lakitu rescue
 	},
 	['MarioKart_DS'] = { -- Mario Kart DS
 		func = function(gamemeta)
@@ -9593,6 +9621,13 @@ local gamedata = {
 		--   +0x110: timer that counts up on hits from items/stage hazards
 		-- 0x17C800 is the race status: 0 before, 1 during, 2 after
 		-- 0x175644: 0 menus, 1 for replays, 2 in races, 3 in demos/after race
+	},
+	['ClashAtDemonhead_NES']={ -- Clash At Demonhead
+		func=health_swap,
+		is_valid_gamestate=function() return memory.read_u8(0x002C, "RAM")==24 end,
+		get_health=function() return memory.read_s8(0x009F, "RAM") end,	
+		other_swaps=function() return false end,
+		grace=20,
 	},
 	['CrashBandicoot1_PS1_USA']={
 		-- TODO: swap on death in bonus stages
