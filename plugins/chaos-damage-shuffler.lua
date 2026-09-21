@@ -262,6 +262,7 @@ plugin.description =
 	-Mario Kart: Super Circuit (SNES), 1p, Grand Prix - shuffles on collisions with other karts (lost coins or have 0 coins), falls
 	-Mario Kart (DS), 1p
 	-Mario Paint (SNES), joystick hack, Gnat Attack, 1p
+	-Mario Party 2 (N64), 1p - Standard play and Mini-game Coaster supported
 	-Math Blaster - Episode 1 (SNES), 1p
 	-Mega Q*Bert (Genesis/Mega Drive), 1p
 	-Mendel Palace (NES), 1p
