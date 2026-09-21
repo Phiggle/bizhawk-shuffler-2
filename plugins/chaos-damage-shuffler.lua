@@ -2481,6 +2481,331 @@ local function metroid_fusion_offset(gamemeta)
 	})
 end
 
+local function MarioParty2_N64_swap(gamemeta)
+
+	return function()
+
+		--Supports both 1-player standard play and the Mini-Game Coaster
+		--Swap condition for Mini-Game Coaster is simply failing a mini-game
+		--Swap conditions for standard play come in several forms
+			--Losing a Star for any reason
+			--During your turn, losing coins for no possible benefit, specifically:
+				--Losing coins to the Koopa or Bowser Banks
+				--Losing coins to a Bowser Space
+				--Losing coins at a Chance Time
+				--Failing the Item minigame (MISS)
+					--Will not swap in Horror Land as it defaults all players to the MISS status throughout the Item game for some reason
+				--Landing on a Red space with at least 1 coin
+				--(NOTE) NPCs and forced events that cost coins but could be beneficial such as the Pirate Land shark that forces you to pay 5 coins to ride it are NOT currently swaps but could be added easily
+					--(portraitCurrent == 23) for the Shark, (portraitCurrent == 32) for the too-expensive-item Bowser specifically
+			--During an opponent's turn, losing coins for any reason
+				--Exception of collecting coins for a Battle or Duel minigame
+			--Losing a minigame
+				--1v1 Duel Minigames
+				--The regular end of round minigames will swap if any combination of players win without you
+					--If it is declared a "Draw", no swap
+				--Battle Minigames (Lightning Bolt Space) will swap if you fail to earn at least 10 coins
+					--In practice this means finishing 1st or 2nd. Can be adjusted to 1st only if desired
+					--In the event that 2nd place earns less than 10 coins, finishing 2nd will also swap
+		
+		--KNOWN ISSUES
+			--Horror Land Item Minigame does not swap on a MISS as described above
+			--If you land on a Red Space that starts a Duel minigame, the swap for the Red Space will happen first. Would prefer the other way around
+			--Chance Time will currently shuffle on any All-Coin or All-Star Swap involving you, even if it ends in your favor
+			--A rare Bowser Space event "Bowser's Multiplying Toads" is not implemented
+				--At no point during testing did it ever appear
+				--The event creates two Star Toads, but one is actually Baby Bowser which steals your money and sells you a black star
+				--The way that is currently handled will probably NOT swap even though it ideally should
+		
+		local p1Coins_changed, p1Coins, prev_p1Coins = update_prev('p1Coins', gamemeta.getp1Coins())
+		local p2Coins_changed, p2Coins, prev_p2Coins = update_prev('p2Coins', gamemeta.getp2Coins())
+		local p3Coins_changed, p3Coins, prev_p3Coins = update_prev('p3Coins', gamemeta.getp3Coins())
+		local p4Coins_changed, p4Coins, prev_p4Coins = update_prev('p4Coins', gamemeta.getp4Coins())
+
+		local p1Game_changed, p1Game, prev_p1Game = update_prev('p1Game', gamemeta.getp1Game())
+		local p2Game_changed, p2Game, prev_p2Game = update_prev('p2Game', gamemeta.getp2Game())
+		local p3Game_changed, p3Game, prev_p3Game = update_prev('p3Game', gamemeta.getp3Game())
+		local p4Game_changed, p4Game, prev_p4Game = update_prev('p4Game', gamemeta.getp4Game())
+		local sumGame = (p1Game + p2Game + p3Game + p4Game)		
+
+		local p1Stars_changed, p1Stars, prev_p1Stars = update_prev('p1Stars', gamemeta.getp1Stars())
+		local p2Stars_changed, p2Stars, prev_p2Stars = update_prev('p2Stars', gamemeta.getp2Stars())
+		local p3Stars_changed, p3Stars, prev_p3Stars = update_prev('p3Stars', gamemeta.getp3Stars())
+		local p4Stars_changed, p4Stars, prev_p4Stars = update_prev('p4Stars', gamemeta.getp4Stars())
+
+		local p1Red_changed, p1Red, prev_p1Red = update_prev('p1Red', gamemeta.getp1Red())
+		local p2Red_changed, p2Red, prev_p2Red = update_prev('p2Red', gamemeta.getp2Red())
+		local p3Red_changed, p3Red, prev_p3Red = update_prev('p3Red', gamemeta.getp3Red())
+		local p4Red_changed, p4Red, prev_p4Red = update_prev('p4Red', gamemeta.getp4Red())
+
+		local _, p1Space = update_prev('p1Space', gamemeta.getp1Space())
+		local _, p2Space = update_prev('p2Space', gamemeta.getp2Space())
+		local _, p3Space = update_prev('p3Space', gamemeta.getp3Space())
+		local _, p4Space = update_prev('p4Space', gamemeta.getp4Space())
+
+		local coasterLives_changed, coasterLives, prev_coasterLives = update_prev('coasterLives', gamemeta.getcoasterLives())
+		
+		local whoTurn = memory.read_u8(0x0F93C7, "RDRAM")	-- Whose turn is it (0-3)
+		local scene = memory.read_u8(0x0FA63F, "RDRAM")	 	-- Active Scene
+		
+		local portraitCurrent = 0
+		local duelActive = false
+		local duelp1 = 0
+		local duelp2 = 0
+		local map = memory.read_u8(0x0F93AB, "RDRAM") 		-- Active Map
+
+		--The NPC Mini-portraits are how we determine which event is which. The portraits are the same in all Lands, but the addresses they are stored change
+		--The Duel Minigame addresses are also Land specific
+		if map == 0 then	--Western Land
+			portraitCurrent = memory.read_u8(0x12EF3F, "RDRAM") 	
+			duelActive = memory.read_u8(0x108C5B, "RDRAM")			
+			duelp1 = memory.read_u8(0x108C1B, "RDRAM")
+			duelp2 = memory.read_u8(0x108C1E, "RDRAM") end	
+			
+		if map == 1 then 	--Pirate Land
+			portraitCurrent = memory.read_u8(0x12E5BF, "RDRAM")
+			duelActive = memory.read_u8(0x109D8F, "RDRAM")
+			duelp1 = memory.read_u8(0x109D93, "RDRAM")
+			duelp2 = memory.read_u8(0x109D97, "RDRAM") end
+
+		if map == 2 then 	--Horror Land
+			portraitCurrent = (memory.read_u8(0x12E80F, "RDRAM") + memory.read_u8(0x12E87F, "RDRAM"))	
+			--The Day and Night portraits are separate. The unused value is either 00 or FF when not in use
+			duelActive = memory.read_u8(0x108E93, "RDRAM") 
+			duelp1 = memory.read_u8(0x108EA3, "RDRAM")
+			duelp2 = memory.read_u8(0x108EA7, "RDRAM") end 
+
+		if map == 3 then 	--Space Land
+			portraitCurrent = memory.read_u8(0x12E98F, "RDRAM")
+			duelActive = memory.read_u8(0x1081E3, "RDRAM") 
+			duelp1 = memory.read_u8(0x1081F3, "RDRAM")
+			duelp2 = memory.read_u8(0x1081F7, "RDRAM") end
+
+		if map == 4 then 	--Mystery Land
+			portraitCurrent = memory.read_u8(0x12E3FF, "RDRAM")
+			duelActive = memory.read_u8(0x108923, "RDRAM") 
+			duelp1 = memory.read_u8(0x108933, "RDRAM")
+			duelp2 = memory.read_u8(0x108937, "RDRAM") end
+
+		if map == 5 then 	--Bowser Land
+			portraitCurrent = memory.read_u8(0x12EBBF, "RDRAM")
+			duelActive = memory.read_u8(0x108C93, "RDRAM") 
+			duelp1 = memory.read_u8(0x108CA3, "RDRAM")
+			duelp2 = memory.read_u8(0x108CA7, "RDRAM") end
+		
+		if portraitCurrent > 255 then portraitCurrent = portraitCurrent - 255  end		--Fix Horror Land inconsistencies with whether the unused portraits are stored as 00 or FF
+																						--I'm sure there's a clever programmer way to make it overflow or something instead
+
+	--All of the relevant addresses are assigned to your player position, which is decided during the opening die roll at the start of the game
+	--As such, we need to track all 4 players throughout since the human-controlled P1 could be in any position
+		p1Index = memory.read_u8(0x0FD2C3, "RDRAM") -- Controller number assigned to Position 1-4
+		p2Index = memory.read_u8(0x0FD2F7, "RDRAM") 
+		p3Index = memory.read_u8(0x0FD32B, "RDRAM") 
+		p4Index = memory.read_u8(0x0FD35F, "RDRAM") 
+
+		local playerPosition
+
+		if p1Index == 0 then playerPosition = 0 end -- Easier to check things such as Duel Minigames this way
+		if p2Index == 0 then playerPosition = 1 end
+		if p3Index == 0 then playerPosition = 2 end
+		if p4Index == 0 then playerPosition = 3 end
+
+	if scene == 61 or scene == 81 or scene == 91 then return false end 		--Results screen, transition, and menu screens that sometimes mess with variables, are excluded
+
+	--MINI-GAME COASTER
+		--These addresses are isolated and should not change in other modes
+		--Scenes 100-108 are the Coaster Level background screens, which is where the lives are lost
+	if coasterLives_changed == true then 									
+		if coasterLives < prev_coasterLives and scene > 99 and scene < 109	
+		then return true end
+	end	
+
+	--ITEM MINIGAME
+		--The Item Minigame uses the same address as regular minigame results, with 255 being a MISS
+		--Exception carved out for Horror Land, which defaults all players to 255 during Item Minigames
+	if p1Index == 0 and p1Game_changed and p1Game == 255 and map ~= 2 then 			
+	return true, 50 end
+	if p2Index == 0 and p2Game_changed and p2Game == 255 and map ~= 2 then 			
+	return true, 50 end
+	if p3Index == 0 and p3Game_changed and p3Game == 255 and map ~= 2 then 
+	return true, 50 end
+	if p4Index == 0 and p4Game_changed and p4Game == 255 and map ~= 2 then 
+	return true, 50 end
+
+	--REGULAR and BATTLE MINIGAMES
+		--Both use the same address for "coins awarded as a result of this game"
+		--Regular minigames, all of them will end with at least one player getting 10 coins, and never less than 10
+			--So, if the CPU values change, and there's at least 10 coins given out, if you didn't get at least 10 yourself, that means you lost the game
+				--The "< 255" part is to stop a CPU getting a MISS on the item game from shuffling
+				--Loose coins earned during mid-game, or games where everyone earns coins separately are stored in a different address and won't count for shuffling
+		--Battle minigames collect coins from all players, then award coins to 1st and 2nd place
+			--The pool is split 70/30, which is usually a small profit for 2nd, but if the pool is under 34 coins, 2nd place will earn less than 10 coins
+				--If that happens, then 2nd will also swap. This is possibly a tad inconsistent, but not that at odds with swapping on getting 2nd in the regular minigames
+				--If only 10-15 total coins are collected, then 1st place would also be less than 10 and would swap which may need addressed.
+					--Given how many coins are given out compared to lost, that seems very unlikely outside of very specific circumstances
+		
+	if p1Index == 0 and (p2Game_changed == true or p3Game_changed == true or p4Game_changed == true) and sumGame >= 10 and sumGame < 255 and p1Game < 10 then 		
+		return true, 100 end
+	if p2Index == 0 and (p1Game_changed == true or p3Game_changed == true or p4Game_changed == true) and sumGame >= 10 and sumGame < 255 and p2Game < 10 then 		
+		return true, 100 end
+	if p3Index == 0 and (p1Game_changed == true or p2Game_changed == true or p4Game_changed == true) and sumGame >= 10 and sumGame < 255 and p3Game < 10 then 		
+		return true, 100 end
+	if p4Index == 0 and (p1Game_changed == true or p2Game_changed == true or p3Game_changed == true) and sumGame >= 10 and sumGame < 255 and p4Game < 10 then 
+		return true, 100 end
+	
+	--This is a line I added to catch odd Star-related shuffles I couldn't diagnose properly (especially on game starting).
+	if scene < 40 or scene > 100 then return false end				
+
+	--LOSING STARS
+		--Losing stars for any reason results in a swap
+		--The only exception is the end-of-game Results Screen where the Stars are put into the Bank. Those scenes are already excluded above
+		--The Chance Time Swap all Stars event will currently shuffle if you have a Star even if it helps (or doesn't hurt). Working on a solution that's not an absolute mess
+	if p1Index == 0 and p1Stars_changed == true and p1Stars < prev_p1Stars then 	
+		return true, 50 end
+	if p2Index == 0 and p2Stars_changed == true and p2Stars < prev_p2Stars then 	
+		return true, 50 end
+	if p3Index == 0 and p3Stars_changed == true and p3Stars < prev_p3Stars then 
+		return true, 50	end
+	if p4Index == 0 and p4Stars_changed == true and p4Stars < prev_p4Stars then 
+		return true, 50	end
+
+	--DUEL MINIGAMES
+		--Losing the Duel results in a swap
+		--However, when selecting the Duel Wager, this causes both players to gain and/or lose coins repeatedly as the challenger selects the Wager, so we need separate logic
+		
+	if scene == 63 or scene == (64 + 2*map) then					
+	--The Duel Minigame scenes in MP2 happen to follow this formula aside from Western Land
+			
+		if duelp1 ~= playerPosition and duelp2 ~= playerPosition then return false end		--Return false for all CPU vs. CPU Duels
+
+		--duelActive is 0 while selecting the Duel wager, and some other value (stage dependant) during different parts of the Duel, including awarding coins to the winner	
+		if duelActive ~= 0 and p1Index == 0 and (p2Coins_changed == true or p3Coins_changed == true or p4Coins_changed == true) then 		
+		return true, 102 end
+		if duelActive ~= 0 and p2Index == 0 and (p1Coins_changed == true or p3Coins_changed == true or p4Coins_changed == true) then 
+		return true, 102 end
+		if duelActive ~= 0 and p3Index == 0 and (p1Coins_changed == true or p2Coins_changed == true or p4Coins_changed == true) then 
+		return true, 102 end
+		if duelActive ~= 0 and p4Index == 0 and (p1Coins_changed == true or p2Coins_changed == true or p3Coins_changed == true) then 
+		return true, 102 end
+		--Return false otherwise to avoid shuffling elsewhere in the code for "losing" coins via the Duel Wager selection process
+		return false end															
+
+
+	--MID-TURN COIN LOSS
+		--The context of losing coins mid-turn is tied directly to which NPC you're interacting with
+		--Each NPC has their own mini-portrait, and we can use that to determine whether losing coins merits a swap
+		--These values are in separate locations per player, so the code is repeated 4 times
+		
+	if p1Index == 0 and p1Coins_changed == true and p1Coins < prev_p1Coins then 	
+		if whoTurn == 0 and
+		--If it's your turn, most coin loss is voluntary. Swap only if:
+			portraitCurrent == 2 or 					
+				--Koopa Bank
+			(portraitCurrent == 5 and p1Space ~=0x00040000 and 
+			p1Space ~=0x00080000 and p1Space ~=0x000C0006) or
+				--Baby Bowser (Includes Bowser Parade itself, but not the Change Parade Route spaces)
+			portraitCurrent == 30 or
+				--Space Bowser, for the Coin Ray (this shouldn't be possible on your turn but in case I missed something)
+			portraitCurrent == 31 or
+				--Bowser Bank
+			(scene == 83) then
+				--Bowser Space
+		return true, 100
+		elseif whoTurn == 0 and scene == 52 then
+				--Chance Time. Extra long delay since this coin animation can take FOREVER. Includes Coin Swap which may benefit you, like Star Swap above
+		return true, 300
+
+		--If it's NOT your turn, almost every coin loss should shuffle
+		elseif whoTurn ~= 0 and portraitCurrent == 7 then			
+				--Getting coins stolen via Boo also gets an extra long delay because this animation also takes forever
+		return true, 300
+		elseif whoTurn ~=0 and portraitCurrent ~= 6 then
+				--The only exception is the Battle Minigame (6 is the Goomba portrait) which shouldn't shuffle unless you lose coins overall
+		return true, 100							
+		end
+	end
+
+		--RED SPACE
+			--Landing on a regular Red space with at least 1 coin is a swap
+			--In the last 5 turns, landing on the same space as another player starts a duel
+				--This current logic will force the Red Space swap BEFORE the Duel starts (not what I'd prefer)
+	if p1Index == 0 and p1Red_changed == true and p1Red > prev_p1Red and p1Coins > 0 then 		
+		return true, 100 									
+	end
+
+	--(Position 2)
+	if p2Index == 0 and p2Coins_changed == true and p2Coins < prev_p2Coins
+		then
+		if whoTurn == 1 and
+			portraitCurrent == 2 or 					
+			(portraitCurrent == 5 and p2Space ~=0x00040000 and 
+			p2Space ~=0x00080000 and p2Space ~=0x000C0006) or 		
+			portraitCurrent == 30 or					
+			portraitCurrent == 31 or			 		
+			(scene == 83) then						
+		return true, 100
+		elseif whoTurn == 1 and scene == 52 then				
+		return true, 300
+		elseif whoTurn ~= 1 and portraitCurrent == 7 then			
+		return true, 300
+		elseif whoTurn ~=1 and portraitCurrent ~= 6 then			
+		return true, 100							
+
+		end
+	end
+
+	if p2Index == 0 and p2Red_changed == true and p2Red > prev_p2Red and p2Coins > 0		
+		then return true, 100 end						
+
+	--(Position 3)
+	if p3Index == 0 and p3Coins_changed == true and p3Coins < prev_p3Coins		
+		then
+		if whoTurn == 2 and
+			portraitCurrent == 2 or 					
+			(portraitCurrent == 5 and p3Space ~=0x00040000 and 
+			p3Space ~=0x00080000 and p3Space ~=0x000C0006) or 		
+			portraitCurrent == 30 or					
+			portraitCurrent == 31 or			 		
+			(scene == 83) then						
+		return true, 100
+		elseif whoTurn == 2 and scene == 52 then				
+		return true, 300
+		elseif whoTurn ~= 2 and portraitCurrent == 7 then			
+		return true, 300
+		elseif whoTurn ~=2 and portraitCurrent ~= 6 then			
+		return true, 100							
+
+		end
+	end
+
+	if p3Index == 0 and p3Red_changed == true and p3Red > prev_p3Red and p3Coins > 0
+		then return true, 100 end
+
+	--(Position 4)
+	if p4Index == 0 and p4Coins_changed == true and p4Coins < prev_p4Coins then
+		if whoTurn == 3 and
+			portraitCurrent == 2 or 					
+			(portraitCurrent == 5 and p4Space ~=0x00040000 and 
+			p4Space ~=0x00080000 and p4Space ~=0x000C0006) or 		
+			portraitCurrent == 30 or					
+			portraitCurrent == 31 or			 		
+			(scene == 83) then						
+		return true, 100
+		elseif whoTurn == 3 and scene == 52 then				
+		return true, 300
+		elseif whoTurn ~= 3 and portraitCurrent == 7 then			
+		return true, 300
+		elseif whoTurn ~=3 and portraitCurrent ~= 6 then			
+		return true, 100							
+		end
+	end
+
+	if p4Index == 0 and p4Red_changed == true and p4Red > prev_p4Red and p4Coins > 0
+		then return true, 100 end
+	end
+end
+
+
 local function always_swap(gamemeta)
 	return function(data)
 		return true -- Always swap!
@@ -10126,6 +10451,42 @@ local gamedata = {
 		-- iframes address: 0x0826 WRAM (signed 8-bit)
 		-- goes to -31 on hit and counts up by 1 per frame until reaching 0
 		grace_on_hit=true,
+	},
+	['MarioParty2_N64']={ -- Mario Party 2 (N64)
+		func=MarioParty2_N64_swap,
+		
+		getp1Coins=function() return memory.read_u8(0x0FD2C9, "RDRAM") end, -- Current Coin Totals for Position 1-4
+		getp2Coins=function() return memory.read_u8(0x0FD2FD, "RDRAM") end, 
+		getp3Coins=function() return memory.read_u8(0x0FD331, "RDRAM") end, 
+		getp4Coins=function() return memory.read_u8(0x0FD365, "RDRAM") end, 
+		
+		getp1Game=function() return memory.read_u8(0x0FD2CD, "RDRAM") end, -- Coins in current minigame for Position 1-4
+		getp2Game=function() return memory.read_u8(0x0FD301, "RDRAM") end, 
+		getp3Game=function() return memory.read_u8(0x0FD335, "RDRAM") end, 
+		getp4Game=function() return memory.read_u8(0x0FD369, "RDRAM") end, 
+		
+		getp1Stars=function() return memory.read_u8(0x0FD2CF, "RDRAM") end, -- Star Totals for Position 1-4
+		getp2Stars=function() return memory.read_u8(0x0FD303, "RDRAM") end,
+		getp3Stars=function() return memory.read_u8(0x0FD337, "RDRAM") end,
+		getp4Stars=function() return memory.read_u8(0x0FD36B, "RDRAM") end,
+
+		getcoasterLives=function() return memory.read_u8(0x0FD8AB, "RDRAM") end, -- Mini-Game Coaster Lives
+		
+		getp1Red=function() return memory.read_u8(0x0FD2ED, "RDRAM") end, -- Number of Red Spaces landed on.
+		getp2Red=function() return memory.read_u8(0x0FD321, "RDRAM") end,
+		getp3Red=function() return memory.read_u8(0x0FD355, "RDRAM") end,
+		getp4Red=function() return memory.read_u8(0x0FD389, "RDRAM") end,
+
+		getp1Space=function() return memory.read_u32_be(0x0FD2D0, "RDRAM") end, -- Your "path" and "space" are both stored in this 32-bit value
+		getp2Space=function() return memory.read_u32_be(0x0FD304, "RDRAM") end, -- Could conceivably be used for more complicated logic
+		getp3Space=function() return memory.read_u32_be(0x0FD338, "RDRAM") end,
+		getp4Space=function() return memory.read_u32_be(0x0FD36C, "RDRAM") end,
+
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x0FD8AB end,
+		LivesWhichRAM=function() return "RDRAM" end,
+		maxlives=function() return 5 end,
+		ActiveP1=function() return true end, -- p1 is always active!
 	},
 }
 
