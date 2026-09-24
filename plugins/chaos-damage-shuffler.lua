@@ -9862,7 +9862,7 @@ local gamedata = {
 		maxlives=function() return 2 end,
 		ActiveP1=function() return true end, -- p1 is always active!
 	},
-	['Mercs_GEN']={ -- Mercs (W) [!] (Genesis)
+	['Mercs_GEN']={ -- Mercs (Genesis)
 		func=health_swap,
 		is_valid_gamestate=function() return memory.read_u8(0x00C5BE, "68K RAM") ~= 255 end, -- confirms that character is not being switched
 		get_health=function() return memory.read_u8(0x00C349, "68K RAM") end,
@@ -9872,6 +9872,31 @@ local gamedata = {
 		LivesWhichRAM=function() return "68K RAM" end,
 		maxlives=function() return 36 end, -- values are stored as multiples of 4; max of 9 continues is 9*4=36
 		ActiveP1=function() return true end, -- p1 is always active!
+		cheats = {
+			InfiniteLives = { -- Revives dead characters in original mode with full health.
+				func = function()
+					-- characters cannot be unlocked out of order. 0: rifle, 2: burner, 4: launcher, 6: laser, 8: homing
+					local charactersUnlocked = memory.read_u8(0x00C3C7, "68K RAM")
+					
+					for i = 0, 4 do
+						if charactersUnlocked >= i * 2 then
+							-- characters are indicated dead by a flag with value 0 indicating alive, 255 indicating dead. revive characters if identified as dead upon shuffling.
+							local characterDeathFlagAddress = 0x00C3B8 + i
+							if memory.read_u8(characterDeathFlagAddress, "68K RAM") == 255 then memory.write_u8(characterDeathFlagAddress, 0, "68K RAM") end
+							
+							--[[ when a revive item is used, characters are revived with max health, or 32+(4*number of health upgrades). The number of health upgrades is itself
+							     stored as 2 * number of health upgrades, so we only need to multiply it by 2. We will revive the player at the same health as a revive item.]]
+							local characterMenuHealthAddress = 0x00C375 + (14 * i)
+							if memory.read_u8(characterMenuHealthAddress, "68K RAM") == 0 then								
+								memory.write_u8(characterMenuHealthAddress,
+									32 + (2 * memory.read_u8(characterMenuHealthAddress + 2, "68K RAM")),
+									"68K RAM")
+							end
+						end
+					end
+				end
+			},
+		},
 	},
 	['MetalSlug1_ARC']={ -- Metal Slug - Super Vehicle-001, arcade
 		func=singleplayer_withlives_swap,
