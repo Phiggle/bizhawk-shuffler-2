@@ -156,6 +156,7 @@ plugin.description =
 
 	ADDITIONAL SUPPORTED GAMES
 	-ActRaiser (SNES), 1p
+	-Adventure Island II (NES), 1p
 	-Adventures in the Magic Kingdom (NES), 1p
 	-Adventures of the Gummi Bears (bootleg) (Genesis/Mega Drive), 1p
 	-Aero Fighters 2 / Sonic Wings 2 (Arcade), 1p
@@ -6317,6 +6318,39 @@ local gamedata = {
 			return gameMode >= 1 and gameMode <= 8 -- p1 is always active, but don't set lives when in sim mode
 		end,
 		grace=60, -- Professional/Action Mode (Nintendo Super System only???? Must verify) can combo you too rapidly to recover
+	},
+	['AdventureIsland2_NES']={ -- Adventure Island II, NES
+		func=singleplayer_withlives_swap,
+		p1gethp=function() return 1 end, -- the energy meter drains regularly, so it is not particularly useful to treat as a standard health bar
+		p1getlc=function() return memory.read_u8(0x07D2, "RAM") end,
+		maxhp=function() return 1 end,
+		gmode=function() return memory.read_u8(0x07DF, "RAM")==0 end, -- game is playing, not in opening demo
+		other_swaps=function()
+			-- current form is stored as the tens digit when read as hex; the units digit is used to determine if player is swimming
+			local form_changed, form_curr, form_prev = update_prev('form', (memory.read_u8(0x007C, "RAM") & 0xF0)>>4) -- read only tens digit
+			local energy_changed, energy_curr, energy_prev = update_prev('energy', memory.read_u8(0x07D3, "RAM"))
+			
+			--[[ before a stage, the player enters a menu that allows them to store powerups, which can change their form. avoid shuffling while the menu so that they do not
+			     shuffle from being returned to base form by storing their powerups. additionally, avoid shuffling on the frame after the menu has closed, since energy is also
+				 reset for the new stage and may now be lower ]]
+			local prestage_changed, prestage_curr, _ = update_prev('prestage', memory.read_u8(0x003E, "RAM")) -- indicates that player is on pre-stage menu
+			if prestage_curr == 3 or prestage_changed then return false end
+			
+			-- energy drains regularly by 1 over time, and is counted down rapidly by 1 at the end of stage, but falls by greater amount when the player collides with obstacles 
+			if energy_changed and energy_curr < energy_prev - 1 
+				and energy_curr > 0 then return true end -- shuffling on death when energy is lowered to zero is handled by life loss
+			
+			--[[ shuffle when the player takes a hit and returns to base form. forms are stored in hex. 0x0 = base, 0x10 = skateboard, 0x20 = blue camptosaurus,
+			0x30 = red captosaurus, 0x40 = pteranodon, 0x50 = elasmosaurus ]]
+			if form_changed and form_curr == 0 then return true end 
+			
+			return false -- default
+			end,
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x07D2 end,
+		LivesWhichRAM=function() return "RAM" end,
+		maxlives=function() return 9 end,
+		ActiveP1=function() return true end, -- p1 is always active!
 	},
 	['PanicRestaurant_NES']={ -- Panic Restaurant
 		func=singleplayer_withlives_swap,
