@@ -9441,7 +9441,24 @@ local gamedata = {
 		swap_exceptions=function()
 			-- bonk is returned to normal form for bonus stages, need to suppress swap when entering
 			local isOnBonusStage = memory.read_u8(0x00100D, "WRAM")
-			return isOnBonusStage == 1 or isOnBonusStage == 17 end,
+			if isOnBonusStage == 1 or isOnBonusStage == 17 then return true end
+			
+			local health_changed, health_cur, health_prev = update_prev('health', memory.read_u8(0x00101C, "WRAM"))
+			
+			-- some areas may have bonk being eaten and swimming through digestive fluids, which deals recurring damage.
+			-- as this may be unavoidable,avoid shuffling when taking digestion damage.
+			local digestiontimer_changed, digestiontimer_cur, digestiontimer_prev = update_prev('digestiontimer', memory.read_u8(0x00108A, "WRAM"))
+			
+			-- confirm timing of digestion damage by observing when timer ticks over.
+			-- since digestion deals 1 damage or powerup loss, we also assume damage greater than 1 is not digestion
+			if digestiontimer_changed and health_changed and digestiontimer_cur == 130 and digestiontimer_prev == 1 and health_cur == health_prev - 1 then return true end
+			
+			-- the third boss, Harey, drains the player's health by 1 over the course of the fight. suppress shuffling when player's health is being drained
+			local hareytimer_changed, hareytimer_cur, hareytimer_prev = update_prev('hareytimer', memory.read_u8(0x000249, "WRAM"))			
+			if hareytimer_changed and health_changed and hareytimer_cur == 0 and hareytimer_prev == 119 and health_cur == health_prev - 1 then return true end
+			
+			return false
+		end,
 		CanHaveInfiniteLives=false, -- disabled since continues are infinite and lives revive you on the spot anyway
 		p1livesaddr=function() return 0x00101E end,
 		LivesWhichRAM=function() return "WRAM" end,
@@ -9452,7 +9469,13 @@ local gamedata = {
 			local meatlevel_changed, meatlevel_cur, meatlevel_prev = update_prev('meatlevel', memory.read_u8(0x001009, "WRAM"))
 			local _, _, meatseconds_prev = update_prev('meatseconds', memory.read_s8(0x001010, "WRAM"))
 			local _, _, meatmillis_prev = update_prev('meatmillis', memory.read_s8(0x00100F, "WRAM"))
-			return meatlevel_changed and meatlevel_cur < meatlevel_prev and (meatseconds_prev ~= 0 or meatmillis_prev ~= 0) end,
+			
+			-- prevent shuffling due to power up loss when digested
+			local digestion_changed, _, digestion_prev = update_prev('digestion', memory.read_u8(0x00108A, "WRAM"))
+			if digestion_changed and digestion_prev == 1 then return false end
+			
+			return meatlevel_changed and meatlevel_cur < meatlevel_prev and (meatseconds_prev ~= 0 or meatmillis_prev ~= 0)
+		end,
 	},
 	['SuperBonk2_SNES']={ -- Super Genjin 2 (Japan)
 		func=singleplayer_withlives_swap,
