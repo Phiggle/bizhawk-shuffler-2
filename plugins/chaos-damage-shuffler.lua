@@ -534,6 +534,36 @@ local function update_prev(key, value)
 	return changed, value, prev_value
 end
 
+---
+-- updates indexed values in prevdata and returns whether they have changed, new values, and old values
+-- values are supplied through a function that takes the index as a parameter
+-- values are only considered changed if they weren't nil before
+-- the range of indices should be supplied as one or two numbers
+-- specifying one value will iterate over the range [1, a], two values the range [a, b]
+local function update_table(key, func, a, b)
+	
+	if key == nil or type(func) ~= 'function' then
+		error("update_table requires both a key and a value function")
+	end
+	
+	local from = b and a or 1
+	local to = b or a
+	
+	local stored = prevdata[key] or {}
+	prevdata[key] = stored
+	
+	local changed, values, prev_values = {}, {}, {}
+	
+	for i = from, to do
+		prev_values[i] = stored[i]
+		values[i] = func(i)
+		stored[i] = values[i]
+		changed[i] = prev_values[i] ~= nil and values[i] ~= prev_values[i]
+	end
+	
+	return changed, values, prev_values
+end
+
 -- Sets prevdata[key] to start_value.
 -- If reset is true, the start_value always replaces any previous value.
 -- if keep_highest is true, start_value only replaces a lower previous value.
