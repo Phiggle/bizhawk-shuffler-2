@@ -259,7 +259,8 @@ function get_games_list(force)
 			-- open the cue file, oh god here we go...
 			local fp = assert(io.open(GAMES_FOLDER .. '/' .. filename, 'r'))
 			for line in fp:lines() do
-				local ref_file = line.match(line, '^%s*FILE%s+"(.-)"') or line.match(line, '^%s*FILE%s+(%g+)') -- quotes optional
+				local file_cmd = '^%s*[Ff][Ii][Ll][Ee]%s+' -- case insensitive
+				local ref_file = line:match(file_cmd .. '"(.-)"') or line:match(file_cmd .. '(%g+)') -- quotes optional
 				if ref_file then
 					table.insert(toremove_ignore_case, ref_file)
 					-- BizHawk automatically looks for these even if the .cue only references foo.bin
@@ -335,7 +336,10 @@ function save_current_game()
 		end
 		overwrite(statename, statename .. '.bk1')
 		log_debug('save_current_game: save "%s"', statename)
-		savestate.save(statename)
+		-- compare against false due to void return on older BizHawk versions
+		if savestate.save(statename) == false then
+			log_console('Failed to save state: %s', statename)
+		end
 	end
 end
 
@@ -360,7 +364,12 @@ local function on_game_load()
 	local state = get_savestate_file()
 	if file_exists(state) then
 		log_debug('on_game_load: load state "%s"', state)
-		savestate.load(state)
+		-- compare against false due to void return on older BizHawk versions
+		if savestate.load(state) == false then
+			log_console('Failed to load state: %s', state)
+		end
+	else
+		log_quiet([[State "%s" doesn't exist]], state)
 	end
 
 	-- update swap counter for this game
