@@ -9848,10 +9848,9 @@ local gamedata = {
 							--[[ when a revive item is used, characters are revived with max health, or 32+(4*number of health upgrades). The number of health upgrades is itself
 							     stored as 2 * number of health upgrades, so we only need to multiply it by 2. We will revive the player at the same health as a revive item.]]
 							local characterMenuHealthAddress = 0x00C375 + (14 * i)
-							if memory.read_u8(characterMenuHealthAddress, "68K RAM") == 0 then								
-								memory.write_u8(characterMenuHealthAddress,
-									32 + (2 * memory.read_u8(characterMenuHealthAddress + 2, "68K RAM")),
-									"68K RAM")
+							if memory.read_u8(characterMenuHealthAddress, "68K RAM") == 0 then
+								local maxHealth = 32 + (2 * memory.read_u8(characterMenuHealthAddress + 2, "68K RAM"))
+								memory.write_u8(characterMenuHealthAddress, maxHealth, "68K RAM")
 							end
 						end
 					end
