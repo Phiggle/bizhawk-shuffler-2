@@ -2502,7 +2502,8 @@ local function MarioParty2_N64_swap(gamemeta)
 		local duelp2 = {0x108C1F, 0x109D97, 0x108EA7, 0x1081F7, 0x108937, 0x108CA7}
 
 		local_, playerIndex = update_table('playerIndex', gamemeta.getplayerIndex, 0, 3)
-
+		local_, space = update_table('space', gamemeta.getspace, 0, 3)
+		
 		local coins_changed, coins, prev_coins = update_table('coins', gamemeta.getcoins, 0, 3)
 		local game_changed, game, prev_game = update_table('game', gamemeta.getgame, 0, 3)
 		local stars_changed, stars, prev_stars = update_table('stars', gamemeta.getstars, 0, 3)
@@ -2534,7 +2535,10 @@ local function MarioParty2_N64_swap(gamemeta)
 	for player = 0, 3 do
 		if playerIndex[player] == 0 then playerPosition = player end
 	end
-
+	--Losing a Star for any reason. Currently shuffles on Star Swap during Chance Time even if it benefits you
+		if stars_changed[playerPosition] == true and stars[playerPosition] < prev_stars[playerPosition] then
+			return true, 51 end
+		
 	for player = 0, 3 do
 		--MISS Condition for item game. Horrorland changes all players' values to 255 regardless of turn throughout the item game so it is excluded
 		if playerPosition == whoTurn and game_changed[player] == true and game[player] == 255 and map ~= 2 then return true, 50 end
@@ -2544,10 +2548,6 @@ local function MarioParty2_N64_swap(gamemeta)
 		--Games where everyone gets variable amounts of coins will not shuffle
 		if game_changed[player] == true and game[player] >= 10 and game[player] < 255 and game[playerPosition] < 5 then
 			return true, 100 end
-			
-		--Losing a Star for any reason. Currently shuffles on Star Swap during Chance Time even if it benefits you
-		if stars_changed[player] == true and stars[player] < prev_stars[player] then
-			return true, 51 end
 			
 		--Duel Minigames
 		if scene == 63 or scene == (64 + 2*map) then		
