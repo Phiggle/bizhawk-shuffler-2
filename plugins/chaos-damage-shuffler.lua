@@ -2509,82 +2509,80 @@ local function MarioParty2_N64_swap(gamemeta)
 		local stars_changed, stars, prev_stars = update_table('stars', gamemeta.getstars, 0, 3)
 		local red_changed, red, prev_red = update_table('red', gamemeta.getred, 0, 3)
 
-		local_, whoTurn = update_prev('whoTurn', gamemeta.getwhoTurn())
-		local_, scene = update_prev('scene', gamemeta.getscene())
-		local_, map = update_prev('map', gamemeta.getmap())
+		local whoTurn = gamemeta.getwhoTurn()
+		local scene = gamemeta.getscene()
+		local map = gamemeta.getmap()
 
 		local coasterLives_changed, coasterLives, prev_coasterLives = update_prev('coasterLives', gamemeta.getcoasterLives())
 		local playerPosition = 0
+		local portrait = 0
 		
 		--Horror Land stores portraits in two places, the inactive one sometimes being 00 and sometimes FF
-		local portrait = memory.read_u8(portraitCurrent[map+1], "RDRAM")
-			if map == 2 then portrait = portrait + memory.read_u8(0x12E87F, "RDRAM") end
-			if portrait > 255 then portrait = portrait - 255 end
+		--Other maps always store FF at +0x70 in the relevant scenes
+		if portraitCurrent[map+1] ~= nil then portrait = memory.read_u8(portraitCurrent[map+1], "RDRAM") + memory.read_u8(portraitCurrent[map+1]+0x70, "RDRAM") % 255 end
+					
+		--Results screen, transitions, menu screens and startup scenes that mess with variables are excluded
+		if scene == 0 or scene == 61 or scene == 81 or scene == 91 or scene == 131 or scene == 255 then return false end 		
 		
-	--Results screen, transitions, menu screens and startup scenes that mess with variables are excluded
-	if scene == 0 or scene == 61 or scene == 81 or scene == 91 or scene == 131 or scene == 255 then return false end 		
-		
-	--Mini-game Coaster values are isolated and do not change in other modes
-	if coasterLives_changed == true then 
-	--Scenes 100-108 are the Coaster Level background screens, where the lives are lost
-		if coasterLives < prev_coasterLives and scene > 99 and scene < 109	
-		then return true end
-	end	
-	
-	--Board game mode. Start with which position corresponds to the P1 controller
-	for player = 0, 3 do
-		if playerIndex[player] == 0 then playerPosition = player end
-	end
-	--Losing a Star for any reason. Currently shuffles on Star Swap during Chance Time even if it benefits you
+		--Mini-game Coaster values are isolated and do not change in other modes
+		if map == 7 then
+			return coasterLives_changed and coasterLives < prev_coasterLives
+			end
+				
+		--Board game mode. Start with which position corresponds to the P1 controller
+		for player = 0, 3 do
+			if playerIndex[player] == 0 then playerPosition = player end
+		end
+		--Losing a Star for any reason. Currently shuffles on Star Swap during Chance Time even if it benefits you
 		if stars_changed[playerPosition] == true and stars[playerPosition] < prev_stars[playerPosition] then
 			return true, 51 end
 		
-	for player = 0, 3 do
-		--MISS Condition for item game. Horrorland changes all players' values to 255 regardless of turn throughout the item game so it is excluded
-		if playerPosition == whoTurn and game_changed[player] == true and game[player] == 255 and map ~= 2 then return true, 50 end
+		for player = 0, 3 do
+			--MISS Condition for item game. Horrorland changes all players' values to 255 regardless of turn throughout the item game so it is excluded
+			if playerPosition == whoTurn and game_changed[player] == true and game[player] == 255 and map ~= 2 then 
+				return true, 50 end
 		
-		--Losing a minigame or getting 3rd or 4th in a Battle Minigame
-		--Will still shuffle on 2nd if you receive 5 or fewer coins
-		--Games where everyone gets variable amounts of coins will not shuffle
-		if game_changed[player] == true and game[player] >= 10 and game[player] < 255 and game[playerPosition] < 5 then
-			return true, 100 end
+			--Losing a minigame or getting 3rd or 4th in a Battle Minigame
+				--Games where everyone gets variable amounts of coins uses a different address and will not shuffle
+				--Will shuffle on 2nd in Battle Minigame if you receive 5 or fewer coins.
+				--Using 0 not an option because that value is sometimes a rank, or when there are leftover coins
+			if game_changed[player] == true and game[player] >= 10 and game[player] < 255 and game[playerPosition] < 5 then
+				return true, 100 end
 			
 		--Duel Minigames
-		if scene == 63 or scene == (64 + 2*map) then		
-			--Return false if only CPU players in Duel
-			if memory.read_u8(duelp1[map+1], "RDRAM") ~= playerPosition and memory.read_u8(duelp2[map+1], "RDRAM") ~= playerPosition then
-			return false end
-			--duelActive is 0 when selecting a wager, which could otherwise shuffle
-			if memory.read_u8(duelActive[map+1], "RDRAM") ~= 0 and coins_changed[player] == true and player ~= playerPosition then 
-			return true, 101 end
+			if scene == 63 or scene == (64 + 2*map) then		
+				--Return false if only CPU players in Duel
+				if memory.read_u8(duelp1[map+1], "RDRAM") ~= playerPosition and memory.read_u8(duelp2[map+1], "RDRAM") ~= playerPosition then
+				return false end
+				--duelActive is 0 when selecting a wager, which could otherwise shuffle
+				if memory.read_u8(duelActive[map+1], "RDRAM") ~= 0 and coins_changed[player] == true and player ~= playerPosition then 
+				return true, 101 end
 				
-		--Other Coin Losses. Separated by whether or not it is your turn
-		elseif player == playerPosition and coins_changed[player] == true and coins[player] < prev_coins[player] then
-			--On your turn
-			if player == whoTurn and
-				portrait == 2 or 	--Koopa Bank
-				(portrait == 5 and space[player] ~=0x00040000 and 
-				space[player] ~=0x00080000 and space[player] ~=0x000C0006) or	--Baby Bowser (Includes Bowser Parade itself, but not the Change Parade Route spaces)
-				portrait == 30 or	--Space Bowser, for the Coin Ray (this shouldn't be possible on your turn but in case I missed something)
-				portrait == 31 or	--Bowser Bank
-				(scene == 83) then	--Bowser Space
-				return true, 102 end
-			--Chance Time must be able to shuffle on any turn
-			if scene == 52 then 	--Chance Time. Extra long delay	
-				return true, 300 end
-			--On a CPU turn, everything else should shuffle except the entry fee to Battle Minigames
-			if player ~= whoTurn and portrait == 7 then	--Getting coins stolen via Boo also gets an extra long delay
-				return true, 300 end
-			--Do not shuffle for the Battle Minigame entry fee (6 is the Goomba portrait)
-			if player ~= whoTurn and portrait ~= 6 then
-				return true, 103 end
-
-		--Landing on a regular Red space with at least 1 coin		
-		elseif player == playerPosition and red_changed[player] == true and red[player] > prev_red[player] and coins[player] > 0 then
-			return true, 104							
+			--Other Coin Losses. Separated by whether or not it is your turn
+			elseif player == playerPosition and coins_changed[player] == true and coins[player] < prev_coins[player] then
+				--On your turn
+				if player == whoTurn and
+					portrait == 2 or 	--Koopa Bank
+					(portrait == 5 and space[player] ~=0x00040000 and 
+					space[player] ~=0x00080000 and space[player] ~=0x000C0006) or	--Baby Bowser (Includes Bowser Parade itself, but not the Change Parade Route spaces)
+					portrait == 30 or	--Space Bowser, for the Coin Ray (this shouldn't be possible on your turn but in case I missed something)
+					portrait == 31 or	--Bowser Bank
+					(scene == 83) then	--Bowser Space
+					return true, 102 end
+				--Chance Time must be able to shuffle on any turn
+				if scene == 52 then 	--Chance Time. Long animation so has an extra long delay	
+					return true, 300 end
+				--On a CPU turn, everything else should shuffle except the entry fee to Battle Minigames
+				if player ~= whoTurn and portrait == 7 then	--Getting coins stolen via Boo also gets an extra long delay for its long animation
+					return true, 300 end
+				--Do not shuffle for the Battle Minigame entry fee (6 is the Goomba portrait)
+				if player ~= whoTurn and portrait ~= 6 then
+					return true, 103 end
+			--Landing on a regular Red space with at least 1 coin		
+			elseif player == playerPosition and red_changed[player] == true and red[player] > prev_red[player] and coins[player] > 0 then
+				return true, 104 end	
 		end
 	end
-end
 end
 
 local function always_swap(gamemeta)
@@ -10236,12 +10234,12 @@ local gamedata = {
 	['MarioParty2_N64']={ -- Mario Party 2 (N64)
 		func=MarioParty2_N64_swap,
 		
-		getplayerIndex = function(player) return memory.read_u8(0x0FD2C3 + (0x000034*player), "RDRAM") end,
-		getcoins = function(player) return memory.read_u8(0x0FD2C9 + (0x000034*player), "RDRAM") end,
-		getgame = function(player) return memory.read_u8(0x0FD2CD + (0x000034*player), "RDRAM") end,
-		getstars = function(player) return memory.read_u8(0x0FD2CF + (0x000034*player), "RDRAM") end,
-		getred = function(player) return memory.read_u8(0x0FD2ED + (0x000034*player), "RDRAM") end,
-		getspace=function(player) return memory.read_u32_be(0x0FD2D0 + (0x000034*player), "RDRAM") end, -- Your "path" and "space" are both stored in this 32-bit value
+		getplayerIndex = function(player) return memory.read_u8(0x0FD2C3 + (0x34*player), "RDRAM") end,
+		getcoins = function(player) return memory.read_u8(0x0FD2C9 + (0x34*player), "RDRAM") end,
+		getgame = function(player) return memory.read_u8(0x0FD2CD + (0x34*player), "RDRAM") end,
+		getstars = function(player) return memory.read_u8(0x0FD2CF + (0x34*player), "RDRAM") end,
+		getred = function(player) return memory.read_u8(0x0FD2ED + (0x34*player), "RDRAM") end,
+		getspace=function(player) return memory.read_u32_be(0x0FD2D0 + (0x34*player), "RDRAM") end, -- Your "path" and "space" are both stored in this 32-bit value
 		
 		getwhoTurn = function() return memory.read_u8(0x0F93C7, "RDRAM") end,	
 		getscene = function() return memory.read_u8(0x0FA63F, "RDRAM") end,	 	
@@ -10253,9 +10251,9 @@ local gamedata = {
 		p1livesaddr=function() return 0x0FD8AB end,
 		LivesWhichRAM=function() return "RDRAM" end,
 		maxlives=function() return 5 end,
-		ActiveP1=function() return true end, -- p1 is always active!
+		ActiveP1=function() return memory.read_u8(0x0F93AB, "RDRAM")==7 end, --Only active on the Mini-Game Coaster map
 	},
-
+}
 
 local backupchecks = {
 }
