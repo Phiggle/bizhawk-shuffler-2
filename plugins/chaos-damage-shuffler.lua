@@ -2522,6 +2522,7 @@ local function MarioParty2_N64_swap(gamemeta)
 		if portraitCurrent[map+1] ~= nil then portrait = memory.read_u8(portraitCurrent[map+1], "RDRAM") + memory.read_u8(portraitCurrent[map+1]+0x70, "RDRAM") % 255 end
 					
 		--Results screen, transitions, menu screens and startup scenes that mess with variables are excluded
+		--TODO: further work on identifying active game states versus menu, loading, etc.
 		if scene == 0 or scene == 61 or scene == 81 or scene == 91 or scene == 131 or scene == 255 then return false end 		
 		
 		--Mini-game Coaster values are isolated and do not change in other modes
@@ -10252,6 +10253,7 @@ local gamedata = {
 		LivesWhichRAM=function() return "RDRAM" end,
 		maxlives=function() return 5 end,
 		ActiveP1=function() return memory.read_u8(0x0F93AB, "RDRAM")==7 end, --Only active on the Mini-Game Coaster map
+		grace=120, -- grace to prevent some possible double swaps (bank, then red space) as well as swaps on initial startup due to garbage values
 	},
 }
 
