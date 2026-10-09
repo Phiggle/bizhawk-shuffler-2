@@ -264,6 +264,7 @@ plugin.description =
 	-Mario Kart 64 (N64), 1p
 	-Mario Kart DS (DS), 1p
 	-Mario Paint (SNES), joystick hack, Gnat Attack, 1p
+	-Mario Party 2 (N64), 1p - Standard play and Mini-game Coaster supported
 	-Math Blaster - Episode 1 (SNES), 1p
 	-Mega Q*Bert (Genesis/Mega Drive), 1p
 	-Mendel Palace (NES), 1p
@@ -2511,6 +2512,110 @@ local function metroid_fusion_offset(gamemeta)
 			-- add extra delay so you get the whiteout animation before shuffling
 		end,
 	})
+end
+
+local function MarioParty2_N64_swap(gamemeta)
+	return function()
+
+		--Supports both 1-player standard play and the Mini-Game Coaster
+	
+		--KNOWN ISSUES
+			--Horror Land Item Minigame is problematic. Currently given a specific exception
+			--If you land on a Red Space that starts a Duel minigame, the swap for the Red Space will happen first. Would prefer the other way around
+			--Chance Time will currently shuffle on any All-Coin or All-Star Swap involving you, even if it ends in your favor
+			--A rare Bowser Space event "Bowser's Multiplying Toads" is not implemented
+				--At no point have I been able to force it to appear
+				--The event creates two Star Toads, but one is actually Baby Bowser which steals your money
+				--The way that is currently handled will probably NOT swap even though it certainly should
+		
+		local portraitCurrent = {0x12EF3F, 0x12E5BF, 0x12E80F, 0x12E98F, 0x12E3FF, 0x12EBBF}
+		local duelActive = {0x108C53, 0x109D73, 0x108E83, 0x1081D3, 0x108913, 0x108C83}
+		local duelp1 = {0x108C1B, 0x109D93, 0x108EA3, 0x1081F3, 0x108933, 0x108CA3}
+		local duelp2 = {0x108C1F, 0x109D97, 0x108EA7, 0x1081F7, 0x108937, 0x108CA7}
+
+		local_, playerIndex = update_table('playerIndex', gamemeta.getplayerIndex, 0, 3)
+		local_, space = update_table('space', gamemeta.getspace, 0, 3)
+		
+		local coins_changed, coins, prev_coins = update_table('coins', gamemeta.getcoins, 0, 3)
+		local game_changed, game, prev_game = update_table('game', gamemeta.getgame, 0, 3)
+		local stars_changed, stars, prev_stars = update_table('stars', gamemeta.getstars, 0, 3)
+		local red_changed, red, prev_red = update_table('red', gamemeta.getred, 0, 3)
+
+		local whoTurn = gamemeta.getwhoTurn()
+		local scene = gamemeta.getscene()
+		local map = gamemeta.getmap()
+
+		local coasterLives_changed, coasterLives, prev_coasterLives = update_prev('coasterLives', gamemeta.getcoasterLives())
+		local playerPosition = 0
+		local portrait = 0
+		
+		--Horror Land stores portraits in two places, the inactive one sometimes being 00 and sometimes FF
+		--Other maps always store FF at +0x70 in the relevant scenes
+		if portraitCurrent[map+1] ~= nil then portrait = memory.read_u8(portraitCurrent[map+1], "RDRAM") + memory.read_u8(portraitCurrent[map+1]+0x70, "RDRAM") % 255 end
+					
+		--Results screen, transitions, menu screens and startup scenes that mess with variables are excluded
+		--TODO: further work on identifying active game states versus menu, loading, etc.
+		if scene == 0 or scene == 61 or scene == 81 or scene == 91 or scene == 131 or scene == 255 then return false end 		
+		
+		--Mini-game Coaster values are isolated and do not change in other modes
+		if map == 7 then
+			return coasterLives_changed and coasterLives < prev_coasterLives
+			end
+				
+		--Board game mode. Start with which position corresponds to the P1 controller
+		for player = 0, 3 do
+			if playerIndex[player] == 0 then playerPosition = player end
+		end
+		--Losing a Star for any reason. Currently shuffles on Star Swap during Chance Time even if it benefits you
+		if stars_changed[playerPosition] == true and stars[playerPosition] < prev_stars[playerPosition] then
+			return true, 51 end
+		
+		for player = 0, 3 do
+			--MISS Condition for item game. Horrorland changes all players' values to 255 regardless of turn throughout the item game so it is excluded
+			if playerPosition == whoTurn and game_changed[player] == true and game[player] == 255 and map ~= 2 then 
+				return true, 50 end
+		
+			--Losing a minigame or getting 3rd or 4th in a Battle Minigame
+				--Games where everyone gets variable amounts of coins uses a different address and will not shuffle
+				--Will shuffle on 2nd in Battle Minigame if you receive 5 or fewer coins.
+				--Using 0 not an option because that value is sometimes a rank, or when there are leftover coins
+			if game_changed[player] == true and game[player] >= 10 and game[player] < 255 and game[playerPosition] < 5 then
+				return true, 100 end
+			
+		--Duel Minigames
+			if scene == 63 or scene == (64 + 2*map) then		
+				--Return false if only CPU players in Duel
+				if memory.read_u8(duelp1[map+1], "RDRAM") ~= playerPosition and memory.read_u8(duelp2[map+1], "RDRAM") ~= playerPosition then
+				return false end
+				--duelActive is 0 when selecting a wager, which could otherwise shuffle
+				if memory.read_u8(duelActive[map+1], "RDRAM") ~= 0 and coins_changed[player] == true and player ~= playerPosition then 
+				return true, 101 end
+				
+			--Other Coin Losses. Separated by whether or not it is your turn
+			elseif player == playerPosition and coins_changed[player] == true and coins[player] < prev_coins[player] then
+				--On your turn
+				if player == whoTurn and
+					portrait == 2 or 	--Koopa Bank
+					(portrait == 5 and space[player] ~=0x00040000 and 
+					space[player] ~=0x00080000 and space[player] ~=0x000C0006) or	--Baby Bowser (Includes Bowser Parade itself, but not the Change Parade Route spaces)
+					portrait == 30 or	--Space Bowser, for the Coin Ray (this shouldn't be possible on your turn but in case I missed something)
+					portrait == 31 or	--Bowser Bank
+					(scene == 83) then	--Bowser Space
+					return true, 102 end
+				--Chance Time must be able to shuffle on any turn
+				if scene == 52 then 	--Chance Time. Long animation so has an extra long delay	
+					return true, 300 end
+				--On a CPU turn, everything else should shuffle except the entry fee to Battle Minigames
+				if player ~= whoTurn and portrait == 7 then	--Getting coins stolen via Boo also gets an extra long delay for its long animation
+					return true, 300 end
+				--Do not shuffle for the Battle Minigame entry fee (6 is the Goomba portrait)
+				if player ~= whoTurn and portrait ~= 6 then
+					return true, 103 end
+			--Landing on a regular Red space with at least 1 coin		
+			elseif player == playerPosition and red_changed[player] == true and red[player] > prev_red[player] and coins[player] > 0 then
+				return true, 104 end	
+		end
+	end
 end
 
 local function always_swap(gamemeta)
@@ -10252,6 +10357,29 @@ local gamedata = {
 		-- iframes address: 0x0826 WRAM (signed 8-bit)
 		-- goes to -31 on hit and counts up by 1 per frame until reaching 0
 		grace_on_hit=true,
+	},
+	['MarioParty2_N64']={ -- Mario Party 2 (N64)
+		func=MarioParty2_N64_swap,
+		
+		getplayerIndex = function(player) return memory.read_u8(0x0FD2C3 + (0x34*player), "RDRAM") end,
+		getcoins = function(player) return memory.read_u8(0x0FD2C9 + (0x34*player), "RDRAM") end,
+		getgame = function(player) return memory.read_u8(0x0FD2CD + (0x34*player), "RDRAM") end,
+		getstars = function(player) return memory.read_u8(0x0FD2CF + (0x34*player), "RDRAM") end,
+		getred = function(player) return memory.read_u8(0x0FD2ED + (0x34*player), "RDRAM") end,
+		getspace=function(player) return memory.read_u32_be(0x0FD2D0 + (0x34*player), "RDRAM") end, -- Your "path" and "space" are both stored in this 32-bit value
+		
+		getwhoTurn = function() return memory.read_u8(0x0F93C7, "RDRAM") end,	
+		getscene = function() return memory.read_u8(0x0FA63F, "RDRAM") end,	 	
+		getmap = function() return memory.read_u8(0x0F93AB, "RDRAM") end,
+
+		getcoasterLives=function() return memory.read_u8(0x0FD8AB, "RDRAM") end, -- Mini-Game Coaster Lives
+
+		CanHaveInfiniteLives=true,
+		p1livesaddr=function() return 0x0FD8AB end,
+		LivesWhichRAM=function() return "RDRAM" end,
+		maxlives=function() return 5 end,
+		ActiveP1=function() return memory.read_u8(0x0F93AB, "RDRAM")==7 end, --Only active on the Mini-Game Coaster map
+		grace=120, -- grace to prevent some possible double swaps (bank, then red space) as well as swaps on initial startup due to garbage values
 	},
 }
 
