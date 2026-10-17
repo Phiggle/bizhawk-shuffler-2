@@ -163,6 +163,7 @@ plugin.description =
 	-Aero the Acro-Bat (SNES), 1p
 	-Aladdin (Genesis/Mega Drive), 1p
 	-Aladdin (SNES), 1p
+	-Alien Hominid (GBA), 1p
 	-Alundra (PSX), 1p, supports patched versions (e.g., Unworked Designs)
 	-Anticipation (NES), up to 4 players, shuffles on incorrect player answers, correct CPU answers, and running out of time.
 	-Arkanoid: Doh it Again (SNES), 1p
@@ -7103,6 +7104,25 @@ local gamedata = {
 		LivesWhichRAM=function() return "WRAM" end,
 		maxlives=function() return 5 end,
 		ActiveP1=function() return true end, -- p1 is always active!
+	},
+	['AlienHominid_GBA'] = { -- Alien Hominid, GBA
+		func = singleplayer_withlives_swap,
+		p1gethp = function() return 1 end,
+		p1getlc = function() return memory.read_u16_le(0x0130, "IWRAM") end,
+		p1getcc = function() return memory.read_s16_le(0x0132, "IWRAM") end,
+		maxhp = function() return 1 end,
+		-- ignore lives/continues changes during loading
+		swap_exceptions = function() return memory.read_u16_le(0x00FC, "IWRAM") ~= 0 end,
+		-- Infinite* Lives section
+		CanHaveInfiniteLives = true,
+		p1livesaddr = function() return 0x0130 end,
+		LivesWhichRAM = function() return "IWRAM" end,
+		maxlives = function() return 69 end, -- values > 9 show as '+'
+		ActiveP1 = function() return true end,
+		-- OTHER NOTES: (addresses in IWRAM unless stated otherwise)
+		-- continues function like lives, -1 on gameover
+		-- 0x0472 is weapon ammo, 0x0474 is grenades
+		-- for flying stages, 0x16B4 is the ship health
 	},
 	['LionKing_SNES']={ -- The Lion King, SNES
 		func=singleplayer_withlives_swap,
