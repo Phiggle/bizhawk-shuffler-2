@@ -2834,6 +2834,10 @@ local gamedata = {
 			if gamestate==7 then -- during gameplay
 				-- shuffle on active player damage until player's team is wiped out
 				if p1_m1_health_curr + p1_m2_health_curr + p1_m3_health_curr > -3 then -- a player is out at -1 health, so a fully ko'd team would be at -1*3
+					-- suppress shuffling on chip damage to active player from near missed catches. address dependent on active character
+					local chip_damage_address = 0x005BAD + activeplayer
+					if memory.read_u8(chip_damage_address, "m68000 : ram : 0x100000-0x10FFFF") == 64 then return false end
+					
 					-- shuffle if the active player takes damage, ignoring damage to rest of the team
 					if activeplayer == 0 then
 						if p1_m1_health_changed and p1_m1_health_curr < p1_m1_health_prev then return true end
