@@ -207,6 +207,7 @@ plugin.description =
 	-Double Dragon 1 (NES), 1-2p, Mode A or B, shuffles on knockdown and death
 	-Double Dragon 2 (NES), 1-2p, shuffles on knockdown and death
 	-Dragon Ball - Advanced Adventure (GBA), 1p
+	-Drill Dozer (GBA), 1p
 	-DuckTales (NES), 1p
 	-DuckTales 2 (NES), 1p
 	-Dynamite Headdy (Genesis/Mega Drive), 1p
@@ -7180,6 +7181,20 @@ local gamedata = {
 		-- use death counter as 'negative lives'
 		p1getlc = function() return -memory.read_u16_le(0x44D4, "IWRAM") end,
 		maxhp = function() return 1 end,
+	},
+	['DrillDozer_GBA'] = { -- Drill Dozer, GBA
+		func = health_swap,
+		get_health = function() return memory.read_s16_le(0x346BC, "EWRAM") end,
+		-- needed to filter quitting which sets health to zero (so no iframe checks)
+		is_valid_gamestate = function() return memory.read_u8(0x345CC, "EWRAM") == 1 end,
+		delay = 6,
+		-- OTHER NOTES:
+		-- iframes: 0x346D1 EWRAM
+		-- chips: 0x34670 EWRAM
+		-- 0x345CC EWRAM in-level state, 1 is 'active' state
+		--   zeroed out along with health when returning to title
+		-- if needed, 0x0960 IWRAM is set to 1 for demos
+		-- game runs at 30fps
 	},
 	['DuckTales_NES']={ -- Ducktales, NES
 		func=singleplayer_withlives_swap,
