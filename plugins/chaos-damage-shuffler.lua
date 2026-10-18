@@ -200,6 +200,7 @@ plugin.description =
 	-Darkwing Duck (NES), 1p
 	-Demon Front / Moyu Zhanxian (Arcade), 1p
 	-Demon's Crest (SNES), 1p
+	-Densetsu no Starfy 1-3 (GBA), 1p
 	-Dick Tracy (NES), 1p
 	-Do-Re-Mi Fantasy - Milon no Dokidoki Daibouken (SNES), 1p
 	-DoDonPachi (Arcade), 1p
@@ -7625,6 +7626,58 @@ local gamedata = {
 		LivesWhichRAM=function() return "WRAM" end,
 		maxlives=function() return 9 end,
 		ActiveP1=function() return true end, -- p1 is always active!
+	},
+	['Starfy1_GBA'] = { -- Densetsu no Starfy, GBA
+		func = iframe_health_swap,
+		get_iframes = function() return memory.read_u16_le(0x0FB8, "IWRAM") end,
+		get_health = function()
+			return memory.read_u8(0x0FCF, "IWRAM") & 8 == 0 -- boss battle flag
+				and memory.read_u8(0x0F7A, "IWRAM") -- regular health
+				or math.max(memory.read_u8(0x0F7B, "IWRAM"), 1) -- health vs boss
+		end,
+		is_valid_gamestate = function()
+			return memory.read_u8(0x0D6C, "IWRAM") == 1 -- in gameplay state
+				-- don't swap during boss battles until the fight has started
+				and (memory.read_u8(0x0FCF, "IWRAM") & 8 == 0
+				or memory.read_u8(0x0EB0, "IWRAM") & 2 == 0)
+		end,
+		-- OTHER NOTES:
+		-- boss battles use a different health bar
+		--   iframes checks help prevent swapping when switching health values
+		-- losing boss fight deducts from regular health
+		--   fight health is clamped at 1 to avoid double-swapping on loss
+	},
+	['Starfy2_GBA'] = { -- Densetsu no Starfy 2, GBA
+		func = iframe_health_swap,
+		get_iframes = function() return memory.read_u16_le(0x10B8, "EWRAM") end,
+		get_health = function()
+			return memory.read_u32_le(0x77E0, "IWRAM") == 1 -- active boss fight
+				and math.max(memory.read_u8(0x77DC, "IWRAM"), 1) -- health vs boss
+				or memory.read_u8(0x104D, "EWRAM") -- regular health
+		end,
+		is_valid_gamestate = function()
+			return memory.read_u32_le(0x7E28, "IWRAM") == 4 -- in gameplay state
+				-- swap exception for initial forced loss to final boss
+				and not (memory.read_u8(0x7D50, "IWRAM") == 11 -- world 11
+					and memory.read_u8(0x7D54, "IWRAM") == 6 -- stage 6
+					and memory.read_u8(0x7D55, "IWRAM") == 2) -- area 2
+		end,
+		-- OTHER NOTES:
+		-- same boss health mechanics as before
+	},
+	['Starfy3_GBA'] = { -- Densetsu no Starfy 3, GBA
+		func = iframe_health_swap,
+		get_iframes = function() return memory.read_u16_le(0x7D72, "IWRAM") end,
+		get_health = function()
+			return memory.read_u32_le(0x7B4C, "IWRAM") == 1 -- active boss fight
+				and math.max(memory.read_u8(0x7B48, "IWRAM"), 1) -- health vs boss
+				or memory.read_u8(0x7CF8, "IWRAM") -- regular health
+		end,
+		is_valid_gamestate = function() return memory.read_u32_le(0x7E28, "IWRAM") == 5 end,
+		-- OTHER NOTES:
+		-- same boss health mechanics as before
+		-- in gameplay, area ids can be found at 0x7E2C IWRAM in 0xAABBCCDD format
+		--   where A: flags, B: world, C: stage, D: area
 	},
 	['StarTropics_NES']={ -- StarTropics, NES
 		func=singleplayer_withlives_swap,
