@@ -827,7 +827,7 @@ local function singleplayer_withlives_swap(gamemeta)
 		
 		if p1prevlc ~= nil and p1currlc == p1prevlc - 1 then
 			-- MUST CHECK THAT LIVES ALWAYS GO DOWN BY 1. BUT THIS SHOULD HELP REMOVE NONSENSE SWAPS
-			return true
+			return true, gamemeta.death_delay
 		end
 		
 		-- swap if a continue/credit was deducted
@@ -1029,11 +1029,11 @@ local function twoplayers_withlives_swap(gamemeta)
 		-- check to see if the life count went down
 		
 		if p1prevlc ~= nil and p1currlc == p1prevlc - 1 then
-			return true
+			return true, gamemeta.death_delay
 		end
 		
 		if p2prevlc ~= nil and p2currlc == p2prevlc - 1 then
-			return true
+			return true, gamemeta.death_delay
 		end
 		
 		-- swap if a continue/credit was deducted
@@ -1621,7 +1621,11 @@ local function iframe_health_swap(gamemeta)
 		local iframes_valid = iframes_changed and iframes_curr > iframes_prev and iframes_prev <= 1 and iframes_curr >= iframe_minimum
 		if gamemeta.get_health then
 			-- check 0 health for games that don't set iframes on death
-			if (iframes_valid or health_curr == 0) and health_changed and health_curr < health_prev then
+			if (iframes_valid or health_curr <= 0) and health_changed and health_curr < health_prev then
+				-- allow a custom result if this was a death
+				if health_curr <= 0 and gamemeta.swap_on_death then
+					return gamemeta.swap_on_death()
+				end
 				return true, gamemeta.delay
 			end
 		elseif iframes_valid then
@@ -1650,6 +1654,10 @@ local function health_swap(gamemeta)
 		-- only swap if health drops below current max health
 		local max_health = gamemeta.get_max_health and gamemeta.get_max_health()
 		if health_changed and health_curr < health_prev and (not max_health or health_curr < max_health) then
+			-- allow a custom result if this was a death
+			if health_curr <= 0 and gamemeta.swap_on_death then
+				return gamemeta.swap_on_death()
+			end
 			return true, gamemeta.delay
 		end
 		-- sometimes you want to swap for things that don't reduce health
