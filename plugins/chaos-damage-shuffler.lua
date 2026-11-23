@@ -6463,7 +6463,7 @@ local gamedata = {
 		p1gethp=function() return 1 end, -- the energy meter drains regularly, so it is not particularly useful to treat as a standard health bar
 		p1getlc=function() return memory.read_u8(0x07D2, "RAM") end,
 		maxhp=function() return 1 end,
-		gmode=function() return memory.read_u8(0x07DF, "RAM")==0 end, -- game is playing, not in opening demo
+		gmode=function() return memory.read_u8(0x07DF, "RAM")~=255 end, -- game is playing, not in opening demo
 		other_swaps=function()
 			-- current form is stored as the tens digit when read as hex; the units digit is used to determine if player is swimming
 			local form_changed, form_curr, form_prev = update_prev('form', (memory.read_u8(0x007C, "RAM") & 0xF0)>>4) -- read only tens digit
